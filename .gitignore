@@ -1,0 +1,9 @@
+.idea
+.pytest_cache
+build
+dist
+supertokens_fastapi.egg-info
+__pycache__
+releasePassword
+apiPassword
+venv/
