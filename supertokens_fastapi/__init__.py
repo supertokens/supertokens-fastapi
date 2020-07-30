@@ -17,6 +17,7 @@ under the License.
 from .supertokens import (
     SuperTokens,
     Session,
+    auth0_handler,
     supertokens_session,
     supertokens_session_with_anti_csrf,
     supertokens_session_without_anti_csrf,

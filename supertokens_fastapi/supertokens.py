@@ -45,10 +45,12 @@ from supertokens_fastapi.default_callbacks import (
     default_token_theft_detected_callback
 )
 from fastapi.requests import Request
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
-from typing import Callable, List, Union
+from typing import Callable, List, Union, Awaitable
+from httpx import AsyncClient
+from jwt import decode
 
 
 async def create_new_session(request: Request, user_id: str, jwt_payload: Union[dict, None] = None,
@@ -150,7 +152,7 @@ def set_relevant_headers_for_options_api(response: Response) -> None:
     set_options_api_headers(response)
 
 
-async def __supertokens_session(request: Request, enable_anti_csrf_check: bool):
+async def __supertokens_session(request: Request, enable_anti_csrf_check: bool) -> Session:
     refresh_path = (await HandshakeInfo.get_instance()).refresh_token_path
     if CookieConfig.get_instance().refresh_token_path is not None:
         refresh_path = CookieConfig.get_instance().refresh_token_path
@@ -173,6 +175,51 @@ async def supertokens_session_with_anti_csrf(request: Request):
 
 async def supertokens_session_without_anti_csrf(request: Request):
     return await __supertokens_session(request, False)
+
+
+async def auth0_handler(
+    request: Request,
+    domain: str,
+    client_id: str,
+    client_secret: str,
+    redirect_uri: str,
+    callback: Callable[[str, str], Awaitable[any]]
+):
+    request_json = await request.json()
+    action = request_json['action']
+    if action == 'logout':
+        request.state.supertokens = await __supertokens_session(request, True)
+        await request.state.supertokens.revoke_session()
+        return JSONResponse({})
+    auth_code = request_json.code
+    is_login = action == 'login'
+    response = await AsyncClient().post(
+        url='https://' + domain + '/oauth/token',
+        data={
+            'grant_type': 'authorization_code',
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'code': auth_code,
+            'redirect_uri': redirect_uri
+        },
+        headers={
+            'content-type': 'application/x-www-form-urlencoded'
+        }
+    )
+    response_json = response.json()
+    id_token = response_json.id_token
+    expires_in = response_json.expires_in
+
+    if is_login:
+        payload = decode(jwt=id_token, verify=False)
+        try:
+            await callback(payload['sub'], id_token)
+        except TypeError:
+            callback(payload['sub'], id_token)
+    return JSONResponse(content={
+        'id_token': id_token,
+        'expires_in': expires_in
+    })
 
 
 async def manage_cookies_post_response(session: Session, response: Response):
@@ -238,8 +285,7 @@ class SuperTokens:
         refresh_token_path=None,
         cookie_domain=None,
         cookie_secure=None,
-        cookie_same_site=None,
-        auto_middleware=True
+        cookie_same_site=None
     ):
         self.__unauthorised_callback = default_unauthorised_callback
         self.__try_refresh_token_callback = default_try_refresh_token_callback
@@ -247,8 +293,7 @@ class SuperTokens:
 
         session_helper.init(hosts, api_key)
         CookieConfig.init(access_token_path, refresh_token_path, cookie_domain, cookie_secure, cookie_same_site)
-        if auto_middleware:
-            app.add_middleware(SupertokensResponseMiddleware)
+        app.add_middleware(SupertokensResponseMiddleware)
         self.__set_error_handler_callbacks(app)
 
     def __set_error_handler_callbacks(self, app):
