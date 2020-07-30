@@ -21,11 +21,11 @@ from supertokens_fastapi import (
     SuperTokens, Session, create_new_session,
     handshake_info, supertokens_session,
     supertokens_session_with_anti_csrf,
-    set_relevant_headers_for_options_api,
     revoke_all_sessions_for_user
 )
 from fastapi import FastAPI, Depends
 from fastapi.requests import Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, PlainTextResponse
 
 index_file = open("./templates/index.html", "r")
@@ -33,20 +33,25 @@ file_contents = index_file.read()
 index_file.close()
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:8080"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 supertokens = SuperTokens(app, hosts='http://127.0.0.1:9000')
-credential_headers = {
-    'Access-Control-Allow-Origin': 'http://127.0.0.1:8080',
-    'Access-Control-Allow-Credentials': 'true'
-}
 
 
 def try_refresh_token(_):
-    return JSONResponse(content={'error': 'try refresh token'}, status_code=440, headers=credential_headers)
+    return JSONResponse(content={'error': 'try refresh token'}, status_code=440)
 
 
 def unauthorised(_):
-    return JSONResponse(content={'error': 'unauthorised'}, status_code=440, headers=credential_headers)
+    return JSONResponse(content={'error': 'unauthorised'}, status_code=440)
 
 
 supertokens.set_try_refresh_token_error_handler(try_refresh_token)
@@ -87,9 +92,6 @@ def send_file():
 
 def send_options_api_response():
     response = PlainTextResponse(content='', status_code=200)
-    response.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:8080'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-    set_relevant_headers_for_options_api(response)
     return response
 
 
@@ -102,7 +104,7 @@ def login_options():
 async def login(request: Request):
     user_id = (await request.json())['userId']
     await create_new_session(request, user_id)
-    return PlainTextResponse(content=user_id, headers=credential_headers)
+    return PlainTextResponse(content=user_id)
 
 
 @app.options("/beforeeach")
@@ -147,7 +149,6 @@ def options():
 def get_info(session: Session = Depends(supertokens_session_with_anti_csrf)):
     Test.increment_get_session()
     return PlainTextResponse(content=session.get_user_id(), headers={
-        **credential_headers,
         'Cache-Control': 'no-cache, private'
     })
 
@@ -161,7 +162,6 @@ def update_options():
 def update_jwt(session: Session = Depends(supertokens_session_with_anti_csrf)):
     Test.increment_get_session()
     return JSONResponse(content=session.get_jwt_payload(), headers={
-        **credential_headers,
         'Cache-Control': 'no-cache, private'
     })
 
@@ -171,7 +171,6 @@ async def update_jwt_post(request: Request, session: Session = Depends(supertoke
     await session.update_jwt_payload(await request.json())
     Test.increment_get_session()
     return JSONResponse(content=session.get_jwt_payload(), headers={
-        **credential_headers,
         'Cache-Control': 'no-cache, private'
     })
 
@@ -217,7 +216,7 @@ def logout_options():
 @app.post('/logout')
 async def logout(session: Session = Depends(supertokens_session)):
     await session.revoke_session()
-    return PlainTextResponse(content='success', headers=credential_headers)
+    return PlainTextResponse(content='success')
 
 
 @app.options("/revokeAll")
@@ -239,7 +238,7 @@ def refresh_options():
 @app.post('/refresh')
 def refresh(_: Session = Depends(supertokens_session)):
     Test.increment_refresh()
-    return PlainTextResponse(content='refresh success', headers=credential_headers)
+    return PlainTextResponse(content='refresh success')
 
 
 @app.options("/refreshCalledTime")
@@ -249,7 +248,7 @@ def refresh_called_time_options():
 
 @app.get('/refreshCalledTime')
 def get_refresh_called_info():
-    return PlainTextResponse(content=dumps(Test.get_refresh_called_count()), headers=credential_headers)
+    return PlainTextResponse(content=dumps(Test.get_refresh_called_count()))
 
 
 @app.options("/getSessionCalledTime")
@@ -259,7 +258,7 @@ def get_session_called_time_options():
 
 @app.get('/getSessionCalledTime')
 def get_session_called_info():
-    return PlainTextResponse(content=dumps(Test.get_session_called_count()), headers=credential_headers)
+    return PlainTextResponse(content=dumps(Test.get_session_called_count()))
 
 
 @app.options("/ping")

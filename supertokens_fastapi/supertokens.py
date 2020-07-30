@@ -183,7 +183,7 @@ async def auth0_handler(
     client_id: str,
     client_secret: str,
     redirect_uri: str,
-    callback: Callable[[str, str], Awaitable[any]]
+    callback: Union[Callable[[str, str], Awaitable[any]], None] = None
 ):
     request_json = await request.json()
     action = request_json['action']
@@ -191,7 +191,7 @@ async def auth0_handler(
         request.state.supertokens = await __supertokens_session(request, True)
         await request.state.supertokens.revoke_session()
         return JSONResponse({})
-    auth_code = request_json.code
+    auth_code = request_json['code']
     is_login = action == 'login'
     response = await AsyncClient().post(
         url='https://' + domain + '/oauth/token',
@@ -207,15 +207,18 @@ async def auth0_handler(
         }
     )
     response_json = response.json()
-    id_token = response_json.id_token
-    expires_in = response_json.expires_in
+    id_token = response_json['id_token']
+    expires_in = response_json['expires_in']
 
     if is_login:
         payload = decode(jwt=id_token, verify=False)
-        try:
-            await callback(payload['sub'], id_token)
-        except TypeError:
-            callback(payload['sub'], id_token)
+        if callback is not None:
+            try:
+                await callback(payload['sub'], id_token)
+            except TypeError:
+                callback(payload['sub'], id_token)
+        else:
+            await create_new_session(request, payload['sub'], {}, {})
     return JSONResponse(content={
         'id_token': id_token,
         'expires_in': expires_in
