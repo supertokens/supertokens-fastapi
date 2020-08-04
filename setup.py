@@ -13,7 +13,7 @@ extras_require = {
         'jsonschema',
         'flake8',
         'autopep8',
-        'pyyaml',
+        'PyYAML',
         'uvicorn',
         'requests',
         'pytest-asyncio'
@@ -33,7 +33,6 @@ setup(
     packages=find_packages(exclude=["tests",]),
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
@@ -45,7 +44,7 @@ setup(
     ],
     keywords="",
     install_requires=[
-        "pyjwt",
+        "PyJWT",
         "fastapi",
         "starlette",
         "httpx",
