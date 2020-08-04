@@ -40,7 +40,7 @@ from supertokens_fastapi.device_info import (
 from json import JSONDecodeError
 from os import environ
 from threading import Lock
-from httpx import AsyncClient, NetworkError
+from httpx import AsyncClient, NetworkError, ConnectTimeout
 from typing import List, Union
 
 
@@ -144,7 +144,7 @@ class Querier:
             data['deviceDriverInfo'] = {
                 'frontendSDK': DeviceInfo.get_instance().get_frontend_sdk(),
                 'driver': {
-                    'name': 'flask',
+                    'name': 'fastapi',
                     'version': VERSION
                 }
             }
@@ -200,7 +200,7 @@ class Querier:
             except JSONDecodeError:
                 return response.text
 
-        except (ConnectionError, NetworkError):
+        except (ConnectionError, NetworkError, ConnectTimeout):
             return await self.__send_request_helper(
                 path, method, http_function, no_of_tries - 1)
 

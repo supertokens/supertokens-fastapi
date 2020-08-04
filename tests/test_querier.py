@@ -35,6 +35,7 @@ from supertokens_fastapi.constants import (
     HELLO,
     SUPPORTED_CDI_VERSIONS
 )
+from pytest import mark
 
 
 def setup_function(f):
@@ -48,14 +49,15 @@ def teardown_function(f):
     clean_st()
 
 
-def test_get_api_version():
+@mark.asyncio
+async def test_get_api_version():
     try:
-        Querier.get_instance().get_api_version()
+        await Querier.get_instance().get_api_version()
         assert False
     except SuperTokensGeneralError:
         assert True
     start_st()
-    assert Querier.get_instance().get_api_version() == API_VERSION_TEST_BASIC_RESULT
+    assert await Querier.get_instance().get_api_version() == API_VERSION_TEST_BASIC_RESULT
     cv = API_VERSION_TEST_SINGLE_SUPPORTED_CV
     sv = API_VERSION_TEST_SINGLE_SUPPORTED_SV
     assert find_max_version(cv, sv) == API_VERSION_TEST_SINGLE_SUPPORTED_RESULT
@@ -75,41 +77,44 @@ def test_check_supported_core_driver_interface_versions():
     assert sv == set(SUPPORTED_CDI_VERSIONS)
 
 
-def test_core_not_available():
+@mark.asyncio
+async def test_core_not_available():
     try:
         querier = Querier.get_instance()
-        querier.send_get_request('/', [])
+        await querier.send_get_request('/', [])
         assert False
     except SuperTokensGeneralError:
         assert True
 
 
-def test_three_cores_and_round_robin():
+@mark.asyncio
+async def test_three_cores_and_round_robin():
     start_st()
     start_st('localhost', 3568)
     start_st('localhost', 3569)
-    Querier.init_instance('http://localhost:3567;http://localhost:3568/;http://localhost:3569')
+    Querier.init_instance('http://localhost:3567;http://localhost:3568/;http://localhost:3569', None)
     querier = Querier.get_instance()
-    assert querier.send_get_request(HELLO, []) == 'Hello\n'
-    assert querier.send_get_request(HELLO, []) == 'Hello\n'
-    assert querier.send_get_request(HELLO, []) == 'Hello\n'
+    assert await querier.send_get_request(HELLO, []) == 'Hello\n'
+    assert await querier.send_get_request(HELLO, []) == 'Hello\n'
+    assert await querier.send_get_request(HELLO, []) == 'Hello\n'
     assert len(querier.get_hosts_alive_for_testing()) == 3
-    assert querier.send_delete_request(HELLO, []) == 'Hello\n'
+    assert await querier.send_delete_request(HELLO, []) == 'Hello\n'
     assert len(querier.get_hosts_alive_for_testing()) == 3
     assert 'http://localhost:3567' in querier.get_hosts_alive_for_testing()
     assert 'http://localhost:3568' in querier.get_hosts_alive_for_testing()
     assert 'http://localhost:3569' in querier.get_hosts_alive_for_testing()
 
 
-def test_three_cores_one_dead_and_round_robin():
+@mark.asyncio
+async def test_three_cores_one_dead_and_round_robin():
     start_st()
     start_st('localhost', 3568)
-    Querier.init_instance('http://localhost:3567;http://localhost:3568/;http://localhost:3569')
+    Querier.init_instance('http://localhost:3567;http://localhost:3568/;http://localhost:3569', None)
     querier = Querier.get_instance()
-    assert querier.send_get_request(HELLO, []) == 'Hello\n'
-    assert querier.send_get_request(HELLO, []) == 'Hello\n'
+    assert await querier.send_get_request(HELLO, []) == 'Hello\n'
+    assert await querier.send_get_request(HELLO, []) == 'Hello\n'
     assert len(querier.get_hosts_alive_for_testing()) == 2
-    assert querier.send_delete_request(HELLO, []) == 'Hello\n'
+    assert await querier.send_delete_request(HELLO, []) == 'Hello\n'
     assert len(querier.get_hosts_alive_for_testing()) == 2
     assert 'http://localhost:3567' in querier.get_hosts_alive_for_testing()
     assert 'http://localhost:3568' in querier.get_hosts_alive_for_testing()

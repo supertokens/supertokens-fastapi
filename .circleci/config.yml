@@ -1,0 +1,38 @@
+version: 2
+jobs:
+  publish:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - checkout
+      - run: make dev-install
+      - run: pip install setuptools wheel twine
+      - run: python setup.py sdist bdist_wheel
+      - run: twine upload -u $USERNAME -p $PASSWORD dist/*
+  test:
+    docker:
+      - image: rishabhpoddar/supertokens_python_driver_testing
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "dc:54:2e:ac:40:7e:03:19:8f:2a:20:7b:33:86:25:17"
+      - checkout
+      - run: apt-get update
+      - run: make dev-install
+      - run: (cd .circleci/ && ./doTests.sh)
+workflows:
+  version: 2
+  tagged-build:
+    jobs:
+      - publish:
+          filters:
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
+      - test:
+          filters:
+            tags:
+              only: /dev-v[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/

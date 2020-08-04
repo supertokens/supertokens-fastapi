@@ -18,16 +18,16 @@ from supertokens_fastapi.handshake_info import HandshakeInfo
 from .utils import (
     reset, setup_st, clean_st, start_st,
     set_key_value_in_config,
-    TEST_COOKIE_SECURE_VALUE,
     TEST_COOKIE_SECURE_CONFIG_KEY,
     TEST_SESSION_EXPIRED_STATUS_CODE_VALUE,
     TEST_SESSION_EXPIRED_STATUS_CODE_CONFIG_KEY
 )
+from pytest import mark
 from supertokens_fastapi import (
     create_new_session
 )
 from supertokens_fastapi.exceptions import SuperTokensGeneralError
-from flask import Response
+from fastapi.requests import Request
 
 
 def setup_function(f):
@@ -41,17 +41,19 @@ def teardown_function(f):
     clean_st()
 
 
-def test_core_not_available():
+@mark.asyncio
+async def test_core_not_available():
     try:
-        create_new_session(Response(''), 'abc', {}, {})
+        await create_new_session(Request(scope={'type': 'http'}), 'abc', {}, {})
         assert False
     except SuperTokensGeneralError:
         assert True
 
 
-def test_successful_handshake_and_update_jwt():
+@mark.asyncio
+async def test_successful_handshake_and_update_jwt():
     start_st()
-    info = HandshakeInfo.get_instance()
+    info = await HandshakeInfo.get_instance()
     assert info.access_token_path == '/'
     assert info.cookie_domain in {'supertokens.io', 'localhost'}
     assert isinstance(info.jwt_signing_public_key, str)
@@ -62,21 +64,20 @@ def test_successful_handshake_and_update_jwt():
                       bool) and not info.access_token_blacklisting_enabled
     assert isinstance(info.jwt_signing_public_key_expiry_time, int)
     info.update_jwt_signing_public_key_info('test', 100)
-    updated_info = HandshakeInfo.get_instance()
+    updated_info = await HandshakeInfo.get_instance()
     assert updated_info.jwt_signing_public_key == 'test'
     assert updated_info.jwt_signing_public_key_expiry_time == 100
 
 
-def test_custom_config():
+@mark.asyncio
+async def test_custom_config():
     set_key_value_in_config(
         TEST_SESSION_EXPIRED_STATUS_CODE_CONFIG_KEY,
         TEST_SESSION_EXPIRED_STATUS_CODE_VALUE)
     set_key_value_in_config(
         TEST_COOKIE_SECURE_CONFIG_KEY,
-        TEST_COOKIE_SECURE_VALUE)
+        True)
     start_st()
-    assert HandshakeInfo.get_instance(
-    ).session_expired_status_code == TEST_SESSION_EXPIRED_STATUS_CODE_VALUE
-    assert isinstance(
-        HandshakeInfo.get_instance().cookie_secure,
-        bool) and HandshakeInfo.get_instance().cookie_secure
+    instance = await HandshakeInfo.get_instance()
+    assert instance.session_expired_status_code == TEST_SESSION_EXPIRED_STATUS_CODE_VALUE
+    assert isinstance(instance.cookie_secure, bool) and instance.cookie_secure

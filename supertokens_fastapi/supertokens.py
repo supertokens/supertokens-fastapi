@@ -83,12 +83,12 @@ async def get_session(request: Request, enable_csrf_protection: bool) -> Session
         if 'accessToken' in new_session:
             access_token = new_session['accessToken']['token']
 
-        session = Session(access_token, new_session['session']['handle'], new_session['session']['userId'],
-                          new_session['session']['userDataInJWT'])
+        request.state.supertokens = Session(access_token, new_session['session']['handle'],
+                                            new_session['session']['userId'], new_session['session']['userDataInJWT'])
 
         if 'accessToken' in new_session:
-            session.new_access_token_info = new_session['accessToken']
-        return session
+            request.state.supertokens.new_access_token_info = new_session['accessToken']
+        return request.state.supertokens
     except SuperTokensUnauthorisedError as e:
         raise e
 
@@ -182,9 +182,8 @@ async def auth0_handler(
     domain: str,
     client_id: str,
     client_secret: str,
-    redirect_uri: str,
     callback: Union[Callable[[str, str], Awaitable[any]], None] = None
-):
+) -> Response:
     request_json = await request.json()
     action = request_json['action']
     if action == 'logout':
@@ -193,6 +192,7 @@ async def auth0_handler(
         return JSONResponse({})
     auth_code = request_json['code']
     is_login = action == 'login'
+    redirect_uri = request_json['redirect_uri']
     response = await AsyncClient().post(
         url='https://' + domain + '/oauth/token',
         data={
@@ -301,7 +301,7 @@ class SuperTokens:
 
     def __set_error_handler_callbacks(self, app):
         @app.exception_handler(SuperTokensUnauthorisedError)
-        async def handle_unauthorised(request, e):
+        async def handle_unauthorised(_, e):
             try:
                 response = await self.__unauthorised_callback(e)
             except TypeError:
@@ -326,11 +326,11 @@ class SuperTokens:
             await clear_cookies(response)
             return response
 
-    def set_unauthorised_error_handler(self, callback: Callable[[any], Response]):
+    def set_unauthorised_error_handler(self, callback: Callable[[any], Awaitable[Response]]):
         self.__unauthorised_callback = callback
 
-    def set_try_refresh_token_error_handler(self, callback: Callable[[any], Response]):
+    def set_try_refresh_token_error_handler(self, callback: Callable[[any], Awaitable[Response]]):
         self.__try_refresh_token_callback = callback
 
-    def set_token_theft_detected_error_handler(self, callback: Callable[[str, str], Response]):
+    def set_token_theft_detected_error_handler(self, callback: Callable[[str, str], Awaitable[Response]]):
         self.__token_theft_detected_callback = callback

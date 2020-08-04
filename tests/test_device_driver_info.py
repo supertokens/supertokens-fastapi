@@ -14,16 +14,17 @@ License for the specific language governing permissions and limitations
 under the License.
 """
 
-from flask import Flask, make_response, jsonify
-from pytest import fixture
-
-from supertokens_fastapi import SuperTokens, create_new_session, supertokens_middleware
+from fastapi import FastAPI, Depends
+from fastapi.testclient import TestClient
+from pytest import fixture, mark
+from fastapi.requests import Request
+from supertokens_fastapi import SuperTokens, create_new_session, Session, supertokens_session
 from supertokens_fastapi.device_info import DeviceInfo
 from .utils import (
     reset, setup_st, clean_st, start_st, extract_all_cookies
 )
 from supertokens_fastapi.querier import Querier
-from supertokens_fastapi.constants import SESSION, HELLO, VERSION, COOKIE_DOMAIN_CONFIG
+from supertokens_fastapi.constants import SESSION, HELLO, VERSION
 
 
 def setup_function(f):
@@ -38,75 +39,66 @@ def teardown_function(f):
 
 
 @fixture(scope='function')
-def app():
-    app = Flask(__name__)
-    app.config[COOKIE_DOMAIN_CONFIG] = 'supertokens.io'
-    SuperTokens(app)
+def client():
+    app = FastAPI()
+    SuperTokens(app, cookie_domain='supertokens.io')
 
-    @app.route('/login')
-    def login():
+    @app.post('/login')
+    async def login(request: Request):
         user_id = 'userId'
-        response = make_response(jsonify({'userId': user_id}), 200)
-        create_new_session(response, user_id, {}, {})
-        return response
+        await create_new_session(request, user_id, {}, {})
+        return {'userId': user_id}
 
-    @app.route('/info')
-    @supertokens_middleware()
-    def info():
+    @app.get('/info')
+    def info(_: Session = Depends(supertokens_session)):
         return {}
 
-    return app
+    client = TestClient(app)
+    return client
 
 
-def test_driver_info_check_without_frontend_sdk():
+@mark.asyncio
+async def test_driver_info_check_without_frontend_sdk():
     start_st()
-    response = Querier.get_instance().send_post_request(
+    response = await Querier.get_instance().send_post_request(
         SESSION, {'userId': 'abc'}, True)
     assert response['userId'] == 'abc'
     assert 'deviceDriverInfo' in response
     assert response['deviceDriverInfo'] == {
         'driver': {
-            'name': 'flask',
+            'name': 'fastapi',
             'version': VERSION},
         'frontendSDK': []}
-    response = Querier.get_instance().send_post_request(
+    response = await Querier.get_instance().send_post_request(
         HELLO, {'userId': 'pqr'}, True)
     assert response['userId'] == 'pqr'
     assert 'deviceDriverInfo' not in response
 
 
-def test_driver_info_check_with_frontend_sdk(app):
+def test_driver_info_check_with_frontend_sdk(client: TestClient):
     start_st()
-    response_1 = app.test_client().get('/login')
+    response_1 = client.post('/login')
     cookies_1 = extract_all_cookies(response_1)
-    request_2 = app.test_client()
-    request_2.set_cookie(
-        'localhost',
-        'sAccessToken',
-        cookies_1['sAccessToken']['value'])
-    request_2.set_cookie(
-        'localhost',
-        'sIdRefreshToken',
-        cookies_1['sIdRefreshToken']['value'])
-    request_2.get(
-        '/info',
-        headers={
-            'supertokens-sdk-name': 'ios',
-            'supertokens-sdk-version': '0.0.0'})
-    request_3 = app.test_client()
-    request_3.set_cookie(
-        'localhost',
-        'sAccessToken',
-        cookies_1['sAccessToken']['value'])
-    request_3.set_cookie(
-        'localhost',
-        'sIdRefreshToken',
-        cookies_1['sIdRefreshToken']['value'])
-    request_3.get(
-        '/info',
-        headers={
-            'supertokens-sdk-name': 'android',
-            'supertokens-sdk-version': VERSION})
+    client.get('/info',
+               cookies={
+                   'sAccessToken': cookies_1['sAccessToken']['value'],
+                   'sIdRefreshToken': cookies_1['sIdRefreshToken']['value']
+               },
+               headers={
+                   'supertokens-sdk-name': 'ios',
+                   'supertokens-sdk-version': '0.0.0'
+               }
+               )
+    client.get('/info',
+               cookies={
+                   'sAccessToken': cookies_1['sAccessToken']['value'],
+                   'sIdRefreshToken': cookies_1['sIdRefreshToken']['value']
+               },
+               headers={
+                   'supertokens-sdk-name': 'android',
+                   'supertokens-sdk-version': VERSION
+               }
+               )
 
     assert DeviceInfo.get_instance().get_frontend_sdk() == [{'name': 'ios', 'version': '0.0.0'},
                                                             {'name': 'android', 'version': VERSION}]

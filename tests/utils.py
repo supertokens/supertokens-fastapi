@@ -21,7 +21,8 @@ from yaml import dump, load, FullLoader
 from shutil import copy, rmtree
 from datetime import datetime, timezone
 from subprocess import run, DEVNULL
-
+from requests.models import Response
+from http.cookies import SimpleCookie
 from supertokens_fastapi.cookie_and_header import CookieConfig
 from supertokens_fastapi.querier import Querier
 from supertokens_fastapi.device_info import DeviceInfo
@@ -42,7 +43,7 @@ API_VERSION_TEST_MULTIPLE_SUPPORTED_RESULT = '2.1'
 API_VERSION_TEST_SINGLE_SUPPORTED_SV = ['0.0', '1.0', '1.1', '2.0']
 API_VERSION_TEST_SINGLE_SUPPORTED_CV = ['0.1', '0.2', '1.1', '2.1', '3.0']
 API_VERSION_TEST_SINGLE_SUPPORTED_RESULT = '1.1'
-API_VERSION_TEST_BASIC_RESULT = '2.0'
+API_VERSION_TEST_BASIC_RESULT = '2.1'
 SUPPORTED_CORE_DRIVER_INTERFACE_FILE = './coreDriverInterfaceSupported.json'
 TEST_ENABLE_ANTI_CSRF_CONFIG_KEY = 'enable_anti_csrf'
 TEST_ACCESS_TOKEN_PATH_VALUE = '/test'
@@ -58,13 +59,13 @@ TEST_ACCESS_TOKEN_MAX_AGE_VALUE = 7200  # seconds
 TEST_ACCESS_TOKEN_MAX_AGE_CONFIG_KEY = 'access_token_validity'
 TEST_REFRESH_TOKEN_MAX_AGE_VALUE = 720  # minutes
 TEST_REFRESH_TOKEN_MAX_AGE_CONFIG_KEY = 'refresh_token_validity'
-TEST_COOKIE_SAME_SITE_VALUE = 'Lax'
+TEST_COOKIE_SAME_SITE_VALUE = 'lax'
 TEST_COOKIE_SAME_SITE_CONFIG_KEY = 'cookie_same_site'
-TEST_COOKIE_SECURE_VALUE = True
+TEST_COOKIE_SECURE_VALUE = False
 TEST_COOKIE_SECURE_CONFIG_KEY = 'cookie_secure'
-TEST_DRIVER_CONFIG_COOKIE_DOMAIN = 'custom-driver-config.org'
-TEST_DRIVER_CONFIG_COOKIE_SECURE = True
-TEST_DRIVER_CONFIG_COOKIE_SAME_SITE = 'Lax'
+TEST_DRIVER_CONFIG_COOKIE_DOMAIN = 'supertokens.io'
+TEST_DRIVER_CONFIG_COOKIE_SECURE = False
+TEST_DRIVER_CONFIG_COOKIE_SAME_SITE = 'lax'
 TEST_DRIVER_CONFIG_ACCESS_TOKEN_PATH = '/custom'
 TEST_DRIVER_CONFIG_REFRESH_TOKEN_PATH = '/custom/refresh'
 ACCESS_CONTROL_EXPOSE_HEADER = 'Access-Control-Expose-Headers'
@@ -99,8 +100,8 @@ def start_st(host='localhost', port='3567'):
     pid_after = pid_before = __get_list_of_process_ids()
     run('cd ' + INSTALLATION_PATH + ' && java -Djava.security.egd=file:/dev/urandom -classpath '
                                     '"./core/*:./plugin-interface/*" io.supertokens.Main ./ DEV host='
-                                    + host + ' port=' + str(port) + ' &', shell=True, stdout=DEVNULL)
-    for _ in range(20):
+        + host + ' port=' + str(port) + ' &', shell=True, stdout=DEVNULL)
+    for _ in range(35):
         pid_after = __get_list_of_process_ids()
         if len(pid_after) != len(pid_before):
             break
@@ -155,44 +156,34 @@ def reset():
 
 
 def get_cookie_from_response(response, cookie_name):
-    cookie_headers = response.headers.getlist('Set-Cookie')
-    for header in cookie_headers:
-        attributes = header.split(';')
-        if cookie_name in attributes[0]:
-            cookie = {}
-            for attr in attributes:
-                split = attr.split('=')
-                if split[0].strip() == cookie_name:
-                    cookie['name'] = split[0].strip()
-                    cookie['value'] = split[1]
-                else:
-                    cookie[split[0].strip().lower()] = split[1] if len(
-                        split) > 1 else True
-            return cookie
+    cookies = extract_all_cookies(response)
+    if cookie_name in cookies:
+        return cookies[cookie_name]
     return None
 
 
-def extract_all_cookies(response):
-    cookie_headers = response.headers.getlist('Set-Cookie')
+def extract_all_cookies(response: Response):
+    cookie_headers = SimpleCookie(response.headers.get('set-cookie'))
     cookies = dict()
-    for header in cookie_headers:
-        attributes = header.split(';')
-        cookie = {}
-        is_name = True
-        name = None
-        for attr in attributes:
-            split = attr.split('=')
-            if is_name:
-                name = split[0].strip()
-                cookie['value'] = split[1]
-                is_name = False
+    for key, morsel in cookie_headers.items():
+        cookies[key] = {
+            'value': morsel.value,
+            'name': key
+        }
+        for k, v in morsel.items():
+            if (k == 'secure' or k == 'httponly') and v == '':
+                cookies[key][k] = None
+            elif k == 'samesite':
+                cookies[key][k] = v if v[-1] != ',' else v[:-1]
             else:
-                cookie[split[0].strip().lower()] = split[1] if len(
-                    split) > 1 else True
-        cookies[name] = cookie
+                cookies[key][k] = v
     return cookies
 
 
 def get_unix_timestamp(expiry):
     return int(datetime.strptime(
-        expiry, '%a, %d-%b-%Y %H:%M:%S GMT').replace(tzinfo=timezone.utc).timestamp())
+        expiry, '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc).timestamp())
+
+
+def verify_within_5_second_diff(n1, n2):
+    return -5 <= (n1 - n2) <= 5

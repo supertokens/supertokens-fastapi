@@ -17,6 +17,7 @@ under the License.
 from .utils import (
     reset, setup_st, clean_st, start_st, set_key_value_in_config, TEST_ENABLE_ANTI_CSRF_CONFIG_KEY
 )
+from pytest import mark
 from supertokens_fastapi.session_helper import create_new_session
 from supertokens_fastapi.access_token import get_info_from_access_token
 from supertokens_fastapi.exceptions import SuperTokensTryRefreshTokenError
@@ -34,10 +35,11 @@ def teardown_function(f):
     clean_st()
 
 
-def test_access_token_get_info_with_anti_csrf():
+@mark.asyncio
+async def test_access_token_get_info_with_anti_csrf():
     start_st()
-    jwt_key = HandshakeInfo.get_instance().jwt_signing_public_key
-    session_1 = create_new_session('userId', {}, {})
+    jwt_key = (await HandshakeInfo.get_instance()).jwt_signing_public_key
+    session_1 = await create_new_session('userId', {}, {})
     access_token_1 = session_1['accessToken']['token']
     get_info_from_access_token(access_token_1, jwt_key, False)
     get_info_from_access_token(access_token_1, jwt_key, True)
@@ -58,11 +60,12 @@ def test_access_token_get_info_with_anti_csrf():
         assert True
 
 
-def test_access_token_get_info_without_anti_csrf():
+@mark.asyncio
+async def test_access_token_get_info_without_anti_csrf():
     set_key_value_in_config(TEST_ENABLE_ANTI_CSRF_CONFIG_KEY, False)
     start_st()
-    jwt_key = HandshakeInfo.get_instance().jwt_signing_public_key
-    session_1 = create_new_session('userId', {}, {})
+    jwt_key = (await HandshakeInfo.get_instance()).jwt_signing_public_key
+    session_1 = await create_new_session('userId', {}, {})
     access_token_1 = session_1['accessToken']['token']
     get_info_from_access_token(access_token_1, jwt_key, False)
     try:

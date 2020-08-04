@@ -20,4 +20,4 @@ test:
 	pytest
 
 dev-install:
-	pip3 install fastapi pycryptodome pytest jsonschema autopep8 flake8 httpx pyyaml httpx starlette
+	pip3 install fastapi pycryptodome pytest jsonschema autopep8 flake8 httpx pyyaml httpx starlette pytest-asyncio pyjwt uvicorn requests

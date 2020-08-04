@@ -17,10 +17,17 @@ under the License.
 from supertokens_fastapi.cookie_and_header import (
     set_cookie
 )
-from flask import request, Flask, jsonify
+from supertokens_fastapi import SuperTokens
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from fastapi.responses import Response
 from supertokens_fastapi.utils import get_timestamp_ms
 from pytest import fixture
-from .utils import get_cookie_from_response, get_unix_timestamp, reset, clean_st, setup_st, start_st
+from math import floor
+from .utils import (
+    get_cookie_from_response, get_unix_timestamp, reset, clean_st,
+    setup_st, start_st, verify_within_5_second_diff
+)
 
 """ @fixtures
 scope: function
@@ -43,21 +50,22 @@ def teardown_function(f):
 
 
 @fixture(scope='function')
-def app():
-    app = Flask(__name__)
+def client():
+    app = FastAPI()
+    SuperTokens(app)
 
-    @app.route('/')
-    def cookie_request():
-        response = jsonify({})
+    @app.get('/')
+    async def cookie_request(expiry: int):
         key = 'test'
         value = 'value'
         domain = 'localhost.org'
         secure = True
         http_only = False
         path = '/'
-        expires = int(request.args['expiry'])
+        expires = expiry
         same_site = 'none'
-        set_cookie(
+        response = Response()
+        await set_cookie(
             response,
             key,
             value,
@@ -69,20 +77,21 @@ def app():
             same_site)
         return response
 
-    return app
+    return TestClient(app)
 
 
-def test_set_cookie(app):
+def test_set_cookie(client: TestClient):
     start_st()
     expiry = get_timestamp_ms()
-    response = app.test_client().get('/?expiry=' + str(expiry))
+    response = client.get('/?expiry=' + str(expiry))
     test_cookie = get_cookie_from_response(response, 'test')
     assert test_cookie is not None
-    assert test_cookie['name'] == 'test'
     assert test_cookie['value'] == 'value'
     assert test_cookie['domain'] == 'localhost.org'
     assert test_cookie['path'] == '/'
-    assert test_cookie['samesite'] == 'None'
+    assert test_cookie['samesite'] == 'none'
     assert test_cookie['secure']
     assert test_cookie.get('httponly') is None
-    assert get_unix_timestamp(test_cookie['expires']) == expiry // 1000
+    assert verify_within_5_second_diff(
+        get_unix_timestamp(test_cookie['expires']), floor(expiry / 1000)
+    )

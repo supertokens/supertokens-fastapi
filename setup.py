@@ -14,13 +14,15 @@ extras_require = {
         'flake8',
         'autopep8',
         'pyyaml',
-        'uvicorn'
+        'uvicorn',
+        'requests',
+        'pytest-asyncio'
     ])
 }
 
 setup(
     name="supertokens_fastapi",
-    version="0.2.2",
+    version="1.0.0",
     author="SuperTokens",
     license="Apache 2.0",
     author_email="team@supertokens.io",
