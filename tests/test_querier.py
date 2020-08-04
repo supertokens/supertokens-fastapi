@@ -57,7 +57,7 @@ async def test_get_api_version():
     except SuperTokensGeneralError:
         assert True
     start_st()
-    assert await Querier.get_instance().get_api_version() == API_VERSION_TEST_BASIC_RESULT
+    assert await Querier.get_instance().get_api_version() in API_VERSION_TEST_BASIC_RESULT
     cv = API_VERSION_TEST_SINGLE_SUPPORTED_CV
     sv = API_VERSION_TEST_SINGLE_SUPPORTED_SV
     assert find_max_version(cv, sv) == API_VERSION_TEST_SINGLE_SUPPORTED_RESULT
