@@ -185,7 +185,6 @@ class Querier:
             url = current_host + path
 
             response = await http_function(url)
-            # print(response)
             if ('SUPERTOKENS_ENV' in environ) and (
                     environ['SUPERTOKENS_ENV'] == 'testing'):
                 self.__hosts_alive_for_testing.add(current_host)
