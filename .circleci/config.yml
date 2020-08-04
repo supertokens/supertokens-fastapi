@@ -18,6 +18,7 @@ jobs:
             - "dc:54:2e:ac:40:7e:03:19:8f:2a:20:7b:33:86:25:17"
       - checkout
       - run: apt-get update
+      - run: pip install --upgrade pip
       - run: make dev-install
       - run: (cd .circleci/ && ./doTests.sh)
 workflows:
