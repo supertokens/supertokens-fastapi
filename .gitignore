@@ -7,3 +7,4 @@ __pycache__
 releasePassword
 apiPassword
 venv/
+env/
