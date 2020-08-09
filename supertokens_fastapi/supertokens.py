@@ -229,7 +229,7 @@ async def auth0_handler(
     response_json = response.json()
     id_token = response_json['id_token']
     expires_in = response_json['expires_in']
-    access_token = response['access_token']
+    access_token = response_json['access_token']
     refresh_token = None
     if 'refresh_token' in response_json:
         refresh_token = response_json['refresh_token']
