@@ -32,6 +32,7 @@ from .supertokens import (
     revoke_multiple_sessions,
     revoke_all_sessions_for_user,
     set_relevant_headers_for_options_api,
-    get_all_session_handles_for_user
+    get_all_session_handles_for_user,
+    get_cors_allowed_headers
 )
 from . import exceptions

@@ -7,3 +7,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0] - 2020-08-09
 ### Added
 - Support for refresh tokens in Auth0 handler
+- Adds `get_cors_allowed_headers` function for easier CORS
