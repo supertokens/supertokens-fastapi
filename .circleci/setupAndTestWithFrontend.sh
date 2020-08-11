@@ -75,7 +75,7 @@ git clone git@github.com:supertokens/supertokens-website.git
 cd supertokens-website
 git checkout $2
 cd ../project/test/frontendIntegration/
-SUPERTOKENS_ENV=testing python3 app.py &
+SUPERTOKENS_ENV=testing uvicorn app:app --host localhost --port 8080 &
 pid=$!
 cd ../../../supertokens-website/test/server
 npm i -d

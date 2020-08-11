@@ -48,11 +48,11 @@ supertokens = SuperTokens(app, hosts='http://127.0.0.1:9000')
 
 
 def try_refresh_token(_):
-    return JSONResponse(content={'error': 'try refresh token'}, status_code=440)
+    return JSONResponse(content={'error': 'try refresh token'}, status_code=401)
 
 
 def unauthorised(_):
-    return JSONResponse(content={'error': 'unauthorised'}, status_code=440)
+    return JSONResponse(content={'error': 'unauthorised'}, status_code=401)
 
 
 supertokens.set_try_refresh_token_error_handler(try_refresh_token)
