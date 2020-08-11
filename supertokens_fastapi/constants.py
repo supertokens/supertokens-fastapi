@@ -38,7 +38,6 @@ DEV_PRODUCTION_MODE = '/devproductionmode'
 JWT_DATA = '/jwt/data'
 SESSION_REGENERATE = '/session/regenerate'
 DRIVER_NOT_COMPATIBLE_MESSAGE = 'Current driver version is not compatible with the core version on your host/s'
-SESSION_EXPIRED_STATUS_CODE = 440
 ACCESS_TOKEN_SIGNING_KEY_NAME_IN_DB = 'access_token_signing_key'
 REFRESH_TOKEN_KEY_NAME_IN_DB = 'refresh_token_key'
 ACCESS_TOKEN_COOKIE_KEY = 'sAccessToken'

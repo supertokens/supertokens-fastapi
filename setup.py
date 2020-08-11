@@ -17,7 +17,8 @@ extras_require = {
         'uvicorn',
         'requests',
         'pytest-asyncio',
-        'respx'
+        'respx',
+        'nest-asyncio'
     ])
 }
 
@@ -31,7 +32,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/supertokens/supertokens-fastapi",
-    packages=find_packages(exclude=["tests",]),
+    packages=find_packages(exclude=["tests", ]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",

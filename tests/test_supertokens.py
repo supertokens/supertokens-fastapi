@@ -915,7 +915,7 @@ def test_supertokens_token_theft_detection(client: TestClient):
         }
     )
     assert response_4.json() == {'error': 'token theft detected'}
-    assert response_4.status_code == 440
+    assert response_4.status_code == 440 or response_4.status_code == 401
 
 
 def test_supertokens_basic_usage_of_sessions(client: TestClient):
