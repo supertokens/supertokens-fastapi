@@ -16,13 +16,14 @@ extras_require = {
         'PyYAML',
         'uvicorn',
         'requests',
-        'pytest-asyncio'
+        'pytest-asyncio',
+        'respx'
     ])
 }
 
 setup(
     name="supertokens_fastapi",
-    version="0.3.0",
+    version="0.4.0",
     author="SuperTokens",
     license="Apache 2.0",
     author_email="team@supertokens.io",

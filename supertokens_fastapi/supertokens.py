@@ -187,7 +187,8 @@ async def auth0_handler(
     request_json = await request.json()
     action = request_json['action']
     if action == 'logout':
-        request.state.supertokens = await __supertokens_session(request, True)
+        if not hasattr(request.state, 'supertokens'):
+            request.state.supertokens = await __supertokens_session(request, True)
         await request.state.supertokens.revoke_session()
         return JSONResponse({})
     auth_code = None
@@ -229,7 +230,7 @@ async def auth0_handler(
     response_json = response.json()
     id_token = response_json['id_token']
     expires_in = response_json['expires_in']
-    access_token = response['access_token']
+    access_token = response_json['access_token']
     refresh_token = None
     if 'refresh_token' in response_json:
         refresh_token = response_json['refresh_token']

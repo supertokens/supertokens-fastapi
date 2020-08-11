@@ -71,6 +71,12 @@ TEST_DRIVER_CONFIG_REFRESH_TOKEN_PATH = '/custom/refresh'
 ACCESS_CONTROL_EXPOSE_HEADER = 'Access-Control-Expose-Headers'
 ACCESS_CONTROL_EXPOSE_HEADER_ANTI_CSRF_ENABLE = 'id-refresh-token, anti-csrf'
 ACCESS_CONTROL_EXPOSE_HEADER_ANTI_CSRF_DISABLE = 'id-refresh-token'
+AUTH0_DOMAIN = environ['AUTH0_DOMAIN']
+AUTH0_CLIENT_ID = environ['AUTH0_CLIENT_ID']
+AUTH0_CLIENT_SECRET = environ['AUTH0_CLIENT_SECRET']
+TEST_ID_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' \
+                '.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ' \
+                '.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
 
 
 def set_key_value_in_config(key, value):
