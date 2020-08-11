@@ -19,11 +19,11 @@ import respx
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.requests import Request
 from fastapi.testclient import TestClient
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse
 from jwt import DecodeError
 from pytest import fixture, mark
 from .utils import (
-    get_cookie_from_response, get_unix_timestamp, reset, clean_st,
+    get_unix_timestamp, reset, clean_st,
     setup_st, start_st, verify_within_5_second_diff,
     AUTH0_DOMAIN,
     AUTH0_CLIENT_ID,
@@ -43,13 +43,9 @@ from supertokens_fastapi.constants import (
     API_VERSION,
     SESSION,
     SESSION_REMOVE,
-    SESSION_VERIFY,
-    SESSION_REFRESH,
-    SESSION_USER,
     SESSION_DATA,
     HANDSHAKE
 )
-from time import time
 import httpx
 import json
 from requests import post, get
@@ -111,7 +107,7 @@ def client():
         return JSONResponse(await session.get_session_data())
 
     @app.post("/logout-with-depends")
-    async def logout_without_depends(request: Request, _: Session = Depends(supertokens_session)):
+    async def logout_with_depends(request: Request, _: Session = Depends(supertokens_session)):
         return await auth0_handler(request, AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET)
 
     @app.post("/logout-without-depends")
@@ -213,9 +209,9 @@ async def test_login_with_callback(client: TestClient):
             }
         )
         assert r2.json() == {
-                'access_token': 'test-access-token',
-                'refresh_token': 'test-refresh-token'
-            }
+            'access_token': 'test-access-token',
+            'refresh_token': 'test-refresh-token'
+        }
 
 
 @mark.asyncio
