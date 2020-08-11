@@ -95,6 +95,11 @@ def set_options_api_headers(response: Response):
     set_header(response, ACCESS_CONTROL_ALLOW_CREDENTIALS, 'true')
 
 
+def get_cors_allowed_headers():
+    return [ANTI_CSRF_HEADER_SET_KEY, SUPERTOKENS_SDK_NAME_HEADER_SET_KEY,
+            SUPERTOKENS_SDK_VERSION_HEADER_SET_KEY]
+
+
 def set_header(response: Response, key, value):
     response.headers.append(key, value)
 

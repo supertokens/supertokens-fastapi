@@ -21,7 +21,8 @@ from supertokens_fastapi import (
     SuperTokens, Session, create_new_session,
     handshake_info, supertokens_session,
     supertokens_session_with_anti_csrf,
-    revoke_all_sessions_for_user
+    revoke_all_sessions_for_user,
+    get_cors_allowed_headers
 )
 from fastapi import FastAPI, Depends
 from fastapi.requests import Request
@@ -40,7 +41,7 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type"] + get_cors_allowed_headers(),
 )
 
 supertokens = SuperTokens(app, hosts='http://127.0.0.1:9000')
