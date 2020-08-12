@@ -119,6 +119,7 @@ def start_st(host='localhost', port='3567'):
 def setup_st():
     copy(ORIGINAL_LICENSE_FILE_PATH, LICENSE_FILE_PATH)
     copy(ORIGINAL_CONFIG_YAML_FILE_PATH, CONFIG_YAML_FILE_PATH)
+    set_key_value_in_config("refresh_api_path", "/refresh")
 
 
 def clean_st():
