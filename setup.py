@@ -24,7 +24,7 @@ extras_require = {
 
 setup(
     name="supertokens_fastapi",
-    version="0.3.1",
+    version="0.3.2",
     author="SuperTokens",
     license="Apache 2.0",
     author_email="team@supertokens.io",
