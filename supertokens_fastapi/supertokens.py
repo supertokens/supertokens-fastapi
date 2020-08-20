@@ -254,7 +254,10 @@ async def auth0_handler(
             await create_new_session(request, payload['sub'], {}, session_data)
     elif auth_code is not None:
         session_data = await request.state.supertokens.get_session_data()
-        session_data['refresh_token'] = refresh_token
+        if refresh_token is not None:
+            session_data['refresh_token'] = refresh_token
+        elif 'refresh_token' in session_data:
+            del session_data['refresh_token']
         await request.state.supertokens.update_session_data(session_data)
     return JSONResponse(content={
         'id_token': id_token,
@@ -363,10 +366,11 @@ class SuperTokens:
             await clear_cookies(response)
             return response
 
-    def set_unauthorised_error_handler(self, callback: Callable[[any], Awaitable[Response]]):
+    def set_unauthorised_error_handler(self, callback: Callable[[SuperTokensUnauthorisedError], Union[Awaitable[Response], Response]]):
         self.__unauthorised_callback = callback
 
-    def set_try_refresh_token_error_handler(self, callback: Callable[[any], Awaitable[Response]]):
+    def set_try_refresh_token_error_handler(self, callback: Callable[[SuperTokensTryRefreshTokenError],
+                                                                     Union[Awaitable[Response], Response]]):
         self.__try_refresh_token_callback = callback
 
     def set_token_theft_detected_error_handler(self, callback: Callable[[str, str], Awaitable[Response]]):

@@ -9,3 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for refresh tokens in Auth0 handler
 - Adds `get_cors_allowed_headers` function for easier CORS
 - Compatibility with CDI 2.2
+
+## Fixes
+- Incorrectly deleting session items from session data for Auth0 handler
