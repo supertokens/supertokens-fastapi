@@ -29,7 +29,10 @@ class HandshakeInfo:
         self.access_token_blacklisting_enabled = info['accessTokenBlacklistingEnabled']
         self.access_token_path = info['accessTokenPath']
         self.id_refresh_token_path = info['idRefreshTokenPath']
-        self.cookie_domain = info['cookieDomain']
+        if 'cookieDomain' in info:
+            self.cookie_domain = info['cookieDomain']
+        else:
+            self.cookie_domain = None
         self.cookie_secure = info['cookieSecure']
         self.enable_anti_csrf = info['enableAntiCsrf']
         self.jwt_signing_public_key = info['jwtSigningPublicKey']

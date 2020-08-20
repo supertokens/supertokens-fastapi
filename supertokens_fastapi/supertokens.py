@@ -272,7 +272,7 @@ async def manage_cookies_post_response(session: Session, response: Response):
                 response,
                 access_token['token'],
                 access_token['expiry'],
-                access_token['domain'],
+                access_token['domain'] if 'domain' in access_token else None,
                 access_token['cookiePath'],
                 access_token['cookieSecure'],
                 access_token['sameSite']
@@ -283,7 +283,7 @@ async def manage_cookies_post_response(session: Session, response: Response):
                 response,
                 refresh_token['token'],
                 refresh_token['expiry'],
-                refresh_token['domain'],
+                refresh_token['domain'] if 'domain' in refresh_token else None,
                 refresh_token['cookiePath'],
                 refresh_token['cookieSecure'],
                 refresh_token['sameSite']
@@ -294,7 +294,7 @@ async def manage_cookies_post_response(session: Session, response: Response):
                 response,
                 id_refresh_token['token'],
                 id_refresh_token['expiry'],
-                id_refresh_token['domain'],
+                id_refresh_token['domain'] if 'domain' in id_refresh_token else None,
                 id_refresh_token['cookiePath'],
                 id_refresh_token['cookieSecure'],
                 id_refresh_token['sameSite']

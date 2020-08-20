@@ -58,6 +58,10 @@ from supertokens_fastapi.supertokens import (
     SuperTokens,
     Session
 )
+from supertokens_fastapi.utils import (
+    compare_version
+)
+from supertokens_fastapi.querier import Querier
 from supertokens_fastapi.session_helper import ProcessState
 from time import time
 from pytest import fixture, mark
@@ -724,7 +728,8 @@ def test_cookie_and_header_values_with_csrf_enabled(core_config_client: TestClie
     assert response_4.headers['Id-Refresh-Token'] == 'remove'
 
 
-def test_cookie_and_header_values_with_csrf_disabled(core_config_client: TestClient):
+@mark.asyncio
+async def test_cookie_and_header_values_with_csrf_disabled(core_config_client: TestClient):
     set_key_value_in_config(TEST_ENABLE_ANTI_CSRF_CONFIG_KEY, False)
     set_key_value_in_config(
         TEST_COOKIE_SAME_SITE_CONFIG_KEY,
@@ -735,9 +740,6 @@ def test_cookie_and_header_values_with_csrf_disabled(core_config_client: TestCli
     set_key_value_in_config(
         TEST_ACCESS_TOKEN_PATH_CONFIG_KEY,
         TEST_ACCESS_TOKEN_PATH_VALUE)
-    set_key_value_in_config(
-        TEST_COOKIE_DOMAIN_CONFIG_KEY,
-        TEST_COOKIE_DOMAIN_VALUE)
     set_key_value_in_config(
         TEST_REFRESH_TOKEN_MAX_AGE_CONFIG_KEY,
         TEST_REFRESH_TOKEN_MAX_AGE_VALUE)
@@ -753,9 +755,14 @@ def test_cookie_and_header_values_with_csrf_disabled(core_config_client: TestCli
     cookies_1 = extract_all_cookies(response_1)
 
     assert response_1.headers.get('anti-csrf') is None
-    assert cookies_1['sAccessToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
-    assert cookies_1['sRefreshToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
-    assert cookies_1['sIdRefreshToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
+    if compare_version(await Querier.get_instance().get_api_version(), "2.1") == "2.1":
+        assert cookies_1['sAccessToken']['domain'] == "localhost"
+        assert cookies_1['sRefreshToken']['domain'] == "localhost"
+        assert cookies_1['sIdRefreshToken']['domain'] == "localhost"
+    else:
+        assert cookies_1['sAccessToken']['domain'] == ""
+        assert cookies_1['sRefreshToken']['domain'] == ""
+        assert cookies_1['sIdRefreshToken']['domain'] == ""
     assert cookies_1['sAccessToken']['path'] == TEST_ACCESS_TOKEN_PATH_VALUE
     assert cookies_1['sRefreshToken']['path'] == TEST_REFRESH_TOKEN_PATH_KEY_VALUE
     assert cookies_1['sIdRefreshToken']['path'] == TEST_ACCESS_TOKEN_PATH_VALUE
@@ -795,9 +802,6 @@ def test_cookie_and_header_values_with_csrf_disabled(core_config_client: TestCli
     assert cookies_1['sRefreshToken']['value'] != cookies_2['sRefreshToken']['value']
     assert cookies_1['sIdRefreshToken']['value'] != cookies_2['sIdRefreshToken']['value']
     assert response_2.headers.get('anti-csrf') is None
-    assert cookies_2['sAccessToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
-    assert cookies_2['sRefreshToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
-    assert cookies_2['sIdRefreshToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
     assert cookies_2['sAccessToken']['path'] == TEST_ACCESS_TOKEN_PATH_VALUE
     assert cookies_2['sRefreshToken']['path'] == TEST_REFRESH_TOKEN_PATH_KEY_VALUE
     assert cookies_2['sIdRefreshToken']['path'] == TEST_ACCESS_TOKEN_PATH_VALUE
@@ -839,7 +843,6 @@ def test_cookie_and_header_values_with_csrf_disabled(core_config_client: TestCli
     assert response_3.headers.get('anti-csrf') is None
     assert cookies_3.get('sRefreshToken') is None
     assert cookies_3.get('sIdRefreshToken') is None
-    assert cookies_3['sAccessToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
     assert cookies_3['sAccessToken']['path'] == TEST_ACCESS_TOKEN_PATH_VALUE
     assert cookies_3['sAccessToken']['httponly']
     assert cookies_3['sAccessToken']['samesite'] == TEST_COOKIE_SAME_SITE_VALUE
@@ -860,9 +863,6 @@ def test_cookie_and_header_values_with_csrf_disabled(core_config_client: TestCli
     assert cookies_4['sAccessToken']['value'] == ''
     assert cookies_4['sRefreshToken']['value'] == ''
     assert cookies_4['sIdRefreshToken']['value'] == ''
-    assert cookies_4['sAccessToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
-    assert cookies_4['sRefreshToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
-    assert cookies_4['sIdRefreshToken']['domain'] == TEST_COOKIE_DOMAIN_VALUE
     assert cookies_4['sAccessToken']['path'] == TEST_ACCESS_TOKEN_PATH_VALUE
     assert cookies_4['sRefreshToken']['path'] == TEST_REFRESH_TOKEN_PATH_KEY_VALUE
     assert cookies_4['sIdRefreshToken']['path'] == TEST_ACCESS_TOKEN_PATH_VALUE
