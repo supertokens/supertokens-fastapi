@@ -37,14 +37,14 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://127.0.0.1:8080"
+        "http://localhost.org:8080"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["Content-Type"] + get_cors_allowed_headers(),
 )
 
-supertokens = SuperTokens(app, hosts='http://127.0.0.1:9000')
+supertokens = SuperTokens(app, hosts='http://localhost:9000', cookie_same_site="lax")
 
 
 def try_refresh_token(_):

@@ -75,8 +75,10 @@ git clone git@github.com:supertokens/supertokens-website.git
 cd supertokens-website
 git checkout $2
 cd ../project/test/frontendIntegration/
-SUPERTOKENS_ENV=testing uvicorn app:app --host localhost --port 8080 &
+SUPERTOKENS_ENV=testing uvicorn app:app --host 0.0.0.0 --port 8080 &
 pid=$!
+SUPERTOKENS_ENV=testing uvicorn app:app --host 0.0.0.0 --port 8082 &
+pid2=$!
 cd ../../../supertokens-website/test/server
 npm i -d
 npm i git+https://github.com:supertokens/supertokens-node.git#$3
@@ -91,3 +93,4 @@ fi
 rm -rf ./test/server/node_modules/supertokens-node
 git checkout HEAD -- ./test/server/package.json
 kill -15 $pid
+kill -15 $pid2
