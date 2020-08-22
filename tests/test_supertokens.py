@@ -756,9 +756,9 @@ async def test_cookie_and_header_values_with_csrf_disabled(core_config_client: T
 
     assert response_1.headers.get('anti-csrf') is None
     if compare_version(await Querier.get_instance().get_api_version(), "2.1") == "2.1":
-        assert cookies_1['sAccessToken']['domain'] == "localhost"
-        assert cookies_1['sRefreshToken']['domain'] == "localhost"
-        assert cookies_1['sIdRefreshToken']['domain'] == "localhost"
+        assert cookies_1['sAccessToken']['domain'] == "localhost" or cookies_1['sAccessToken']['domain'] == "supertokens.io"
+        assert cookies_1['sRefreshToken']['domain'] == "localhost" or cookies_1['sRefreshToken']['domain'] == "supertokens.io"
+        assert cookies_1['sIdRefreshToken']['domain'] == "localhost" or cookies_1['sIdRefreshToken']['domain'] == "supertokens.io"
     else:
         assert cookies_1['sAccessToken']['domain'] == ""
         assert cookies_1['sRefreshToken']['domain'] == ""
