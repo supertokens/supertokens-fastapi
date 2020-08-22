@@ -74,7 +74,7 @@ cd ../
 git clone git@github.com:supertokens/supertokens-website.git
 cd supertokens-website
 git checkout $2
-cd ../project/test/frontendIntegration/
+cd ../project/tests/frontendIntegration/
 SUPERTOKENS_ENV=testing uvicorn app:app --host 0.0.0.0 --port 8080 &
 pid=$!
 SUPERTOKENS_ENV=testing uvicorn app:app --host 0.0.0.0 --port 8082 &
