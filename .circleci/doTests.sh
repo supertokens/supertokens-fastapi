@@ -148,13 +148,13 @@ while [ $i -lt $frontendDriverLength ]; do
     nodeTag=$(echo $nodeInfo | jq .tag | tr -d '"')
 
     ./setupAndTestWithFrontend.sh $coreCommercial $frontendTag $nodeTag
-
-    someFrontendTestsRan=true
     if [[ $? -ne 0 ]]
     then
         echo "test failed... exiting!"
         exit 1
     fi
+    
+    someFrontendTestsRan=true
     rm -rf ../../com-root
 done
 
