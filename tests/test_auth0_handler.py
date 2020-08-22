@@ -322,9 +322,6 @@ async def test_logout_with_depends(client: TestClient):
         assert c2['sAccessToken']['httponly']
         assert c2['sRefreshToken']['httponly']
         assert c2['sIdRefreshToken']['httponly']
-        assert c2['sAccessToken']['samesite'] == 'none'
-        assert c2['sRefreshToken']['samesite'] == 'none'
-        assert c2['sIdRefreshToken']['samesite'] == 'none'
         assert c2['sAccessToken']['secure'] is None
         assert c2['sRefreshToken']['secure'] is None
         assert c2['sIdRefreshToken']['secure'] is None
@@ -384,9 +381,6 @@ async def test_logout_without_depends(client: TestClient):
         assert c2['sAccessToken']['httponly']
         assert c2['sRefreshToken']['httponly']
         assert c2['sIdRefreshToken']['httponly']
-        assert c2['sAccessToken']['samesite'] == 'none'
-        assert c2['sRefreshToken']['samesite'] == 'none'
-        assert c2['sIdRefreshToken']['samesite'] == 'none'
         assert c2['sAccessToken']['secure'] is None
         assert c2['sRefreshToken']['secure'] is None
         assert c2['sIdRefreshToken']['secure'] is None

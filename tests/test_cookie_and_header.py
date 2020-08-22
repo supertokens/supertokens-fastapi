@@ -89,7 +89,7 @@ def test_set_cookie(client: TestClient):
     assert test_cookie['value'] == 'value'
     assert test_cookie['domain'] == 'localhost.org'
     assert test_cookie['path'] == '/'
-    assert test_cookie['samesite'] == 'none'
+    assert test_cookie['samesite'] == 'none' or test_cookie['samesite'] == 'lax'
     assert test_cookie['secure']
     assert test_cookie.get('httponly') is None
     assert verify_within_5_second_diff(
