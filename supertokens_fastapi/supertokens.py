@@ -48,7 +48,7 @@ from supertokens_fastapi.default_callbacks import (
 )
 from fastapi.requests import Request
 from fastapi.responses import Response, JSONResponse
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from typing import Callable, List, Union, Awaitable
 from httpx import AsyncClient
@@ -79,20 +79,17 @@ async def get_session(request: Request, enable_csrf_protection: bool) -> Session
     access_token = get_access_token_from_cookie(request)
     if access_token is None:
         raise_try_refresh_token_exception('access token missing in cookies')
-    try:
-        anti_csrf_token = get_anti_csrf_header(request)
-        new_session = await session_helper.get_session(access_token, anti_csrf_token, enable_csrf_protection)
-        if 'accessToken' in new_session:
-            access_token = new_session['accessToken']['token']
+    anti_csrf_token = get_anti_csrf_header(request)
+    new_session = await session_helper.get_session(access_token, anti_csrf_token, enable_csrf_protection)
+    if 'accessToken' in new_session:
+        access_token = new_session['accessToken']['token']
 
-        request.state.supertokens = Session(access_token, new_session['session']['handle'],
-                                            new_session['session']['userId'], new_session['session']['userDataInJWT'])
+    request.state.supertokens = Session(access_token, new_session['session']['handle'],
+                                        new_session['session']['userId'], new_session['session']['userDataInJWT'])
 
-        if 'accessToken' in new_session:
-            request.state.supertokens.new_access_token_info = new_session['accessToken']
-        return request.state.supertokens
-    except SuperTokensUnauthorisedError as e:
-        raise e
+    if 'accessToken' in new_session:
+        request.state.supertokens.new_access_token_info = new_session['accessToken']
+    return request.state.supertokens
 
 
 async def refresh_session(request: Request) -> Session:
@@ -101,21 +98,18 @@ async def refresh_session(request: Request) -> Session:
     if refresh_token is None:
         raise_unauthorised_exception('Missing auth tokens in cookies. Have you set the correct refresh API path in '
                                      'your frontend and SuperTokens config?')
-    try:
-        new_session = await session_helper.refresh_session(refresh_token)
-        access_token = new_session['accessToken']
-        refresh_token = new_session['refreshToken']
-        id_refresh_token = new_session['idRefreshToken']
-        request.state.supertokens = Session(access_token['token'], new_session['session']['handle'],
-                                            new_session['session']['userId'], new_session['session']['userDataInJWT'])
-        request.state.supertokens.new_access_token_info = access_token
-        request.state.supertokens.new_refresh_token_info = refresh_token
-        request.state.supertokens.new_id_refresh_token_info = id_refresh_token
-        if 'antiCsrfToken' in new_session and new_session['antiCsrfToken'] is not None:
-            request.state.supertokens.new_anti_csrf_token = new_session['antiCsrfToken']
-        return request.state.supertokens
-    except (SuperTokensTokenTheftError, SuperTokensUnauthorisedError) as e:
-        raise e
+    new_session = await session_helper.refresh_session(refresh_token)
+    access_token = new_session['accessToken']
+    refresh_token = new_session['refreshToken']
+    id_refresh_token = new_session['idRefreshToken']
+    request.state.supertokens = Session(access_token['token'], new_session['session']['handle'],
+                                        new_session['session']['userId'], new_session['session']['userDataInJWT'])
+    request.state.supertokens.new_access_token_info = access_token
+    request.state.supertokens.new_refresh_token_info = refresh_token
+    request.state.supertokens.new_id_refresh_token_info = id_refresh_token
+    if 'antiCsrfToken' in new_session and new_session['antiCsrfToken'] is not None:
+        request.state.supertokens.new_anti_csrf_token = new_session['antiCsrfToken']
+    return request.state.supertokens
 
 
 async def revoke_session(session_handle: str) -> bool:
@@ -265,6 +259,8 @@ async def auth0_handler(
             'id_token': id_token,
             'expires_in': expires_in
         })
+    except HTTPException as e:
+        raise e
     except Exception as err:
         raise_general_exception(err)
 

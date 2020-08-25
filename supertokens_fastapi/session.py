@@ -15,7 +15,7 @@ under the License.
 """
 from supertokens_fastapi import session_helper
 from supertokens_fastapi.constants import SESSION_REGENERATE
-from supertokens_fastapi.exceptions import SuperTokensUnauthorisedError, raise_unauthorised_exception
+from supertokens_fastapi.exceptions import raise_unauthorised_exception
 from supertokens_fastapi.querier import Querier
 
 
@@ -37,17 +37,11 @@ class Session:
             self.remove_cookies = True
 
     async def get_session_data(self) -> dict:
-        try:
-            return await session_helper.get_session_data(self.__session_handle)
-        except SuperTokensUnauthorisedError as e:
-            raise e
+        return await session_helper.get_session_data(self.__session_handle)
 
     async def update_session_data(self, new_session_data) -> None:
-        try:
-            return await session_helper.update_session_data(
-                self.__session_handle, new_session_data)
-        except SuperTokensUnauthorisedError as e:
-            raise e
+        return await session_helper.update_session_data(
+            self.__session_handle, new_session_data)
 
     async def update_jwt_payload(self, new_jwt_payload) -> None:
         result = await Querier.get_instance().send_post_request(SESSION_REGENERATE, {

@@ -20,7 +20,6 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.requests import Request
 from fastapi.testclient import TestClient
 from fastapi.responses import JSONResponse
-from jwt import DecodeError
 from pytest import fixture, mark
 from .utils import (
     get_unix_timestamp, reset, clean_st,
@@ -38,6 +37,7 @@ from supertokens_fastapi.supertokens import (
     Session,
     supertokens_session
 )
+from supertokens_fastapi.exceptions import SuperTokensGeneralError
 from supertokens_fastapi.utils import get_timestamp_ms
 from supertokens_fastapi.constants import (
     API_VERSION,
@@ -69,9 +69,9 @@ def client():
     app = FastAPI()
     SuperTokens(app)
 
-    @app.exception_handler(DecodeError)
+    @app.exception_handler(SuperTokensGeneralError)
     async def validation_exception_handler(_, __):
-        return JSONResponse(status_code=500, content={'err': 'json decode error'})
+        return JSONResponse(status_code=500, content={'err': 'err'})
 
     @app.post("/login-without-callback")
     async def login_without_callback(request: Request):
