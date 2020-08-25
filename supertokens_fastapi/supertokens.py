@@ -260,6 +260,7 @@ async def auth0_handler(
             'expires_in': expires_in
         })
     except HTTPException as e:
+        # if the exception is of type HTTPException, we don't modify the exception and raise it as it is
         raise e
     except Exception as err:
         raise_general_exception(err)
