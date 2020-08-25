@@ -21,6 +21,7 @@ from supertokens_fastapi.exceptions import (
     SuperTokensTokenTheftError,
     SuperTokensUnauthorisedError,
     SuperTokensTryRefreshTokenError,
+    raise_general_exception
 )
 from supertokens_fastapi.handshake_info import HandshakeInfo
 from supertokens_fastapi.session import Session
@@ -189,80 +190,83 @@ async def auth0_handler(
     client_secret: str,
     callback: Union[Callable[[str, str, str, Union[str, None]], Awaitable[any]], None] = None
 ) -> Response:
-    request_json = await request.json()
-    action = request_json['action']
-    if action == 'logout':
-        if not hasattr(request.state, 'supertokens'):
+    try:
+        request_json = await request.json()
+        action = request_json['action']
+        if action == 'logout':
+            if not hasattr(request.state, 'supertokens'):
+                request.state.supertokens = await __supertokens_session(request, True)
+            await request.state.supertokens.revoke_session()
+            return JSONResponse({})
+        auth_code = None
+        if 'code' in request_json:
+            auth_code = request_json['code']
+        is_login = action == 'login'
+        if not is_login:
             request.state.supertokens = await __supertokens_session(request, True)
-        await request.state.supertokens.revoke_session()
-        return JSONResponse({})
-    auth_code = None
-    if 'code' in request_json:
-        auth_code = request_json['code']
-    is_login = action == 'login'
-    if not is_login:
-        request.state.supertokens = await __supertokens_session(request, True)
 
-    form_data = {}
-    if auth_code is None and action == 'refresh':
-        session_data = await request.state.supertokens.get_session_data()
-        if 'refresh_token' not in session_data:
-            return JSONResponse(content={}, status_code=403)
-        form_data = {
-            'grant_type': 'refresh_token',
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'refresh_token': session_data['refresh_token']
-        }
-    else:
-        form_data = {
-            'grant_type': 'authorization_code',
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'code': auth_code,
-            'redirect_uri': request_json['redirect_uri']
-        }
-
-    response = await AsyncClient().post(
-        url='https://' + domain + '/oauth/token',
-        data=form_data,
-        headers={
-            'content-type': 'application/x-www-form-urlencoded'
-        }
-    )
-    if response.status_code != 200:
-        return JSONResponse(content={}, status_code=response.status_code)
-    response_json = response.json()
-    id_token = response_json['id_token']
-    expires_in = response_json['expires_in']
-    access_token = response_json['access_token']
-    refresh_token = None
-    if 'refresh_token' in response_json:
-        refresh_token = response_json['refresh_token']
-
-    if is_login:
-        payload = decode(jwt=id_token, verify=False)
-        if callback is not None:
-            try:
-                await callback(payload['sub'], id_token, access_token, refresh_token)
-            except TypeError:
-                callback(payload['sub'], id_token, access_token, refresh_token)
+        form_data = {}
+        if auth_code is None and action == 'refresh':
+            session_data = await request.state.supertokens.get_session_data()
+            if 'refresh_token' not in session_data:
+                return JSONResponse(content={}, status_code=403)
+            form_data = {
+                'grant_type': 'refresh_token',
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'refresh_token': session_data['refresh_token']
+            }
         else:
-            session_data = {}
+            form_data = {
+                'grant_type': 'authorization_code',
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'code': auth_code,
+                'redirect_uri': request_json['redirect_uri']
+            }
+
+        response = await AsyncClient().post(
+            url='https://' + domain + '/oauth/token',
+            data=form_data,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+            }
+        )
+        if response.status_code != 200:
+            return JSONResponse(content={}, status_code=response.status_code)
+        response_json = response.json()
+        id_token = response_json['id_token']
+        expires_in = response_json['expires_in']
+        access_token = response_json['access_token']
+        refresh_token = None
+        if 'refresh_token' in response_json:
+            refresh_token = response_json['refresh_token']
+
+        if is_login:
+            payload = decode(jwt=id_token, verify=False)
+            if callback is not None:
+                try:
+                    await callback(payload['sub'], id_token, access_token, refresh_token)
+                except TypeError:
+                    callback(payload['sub'], id_token, access_token, refresh_token)
+            else:
+                session_data = {}
+                if refresh_token is not None:
+                    session_data['refresh_token'] = refresh_token
+                await create_new_session(request, payload['sub'], {}, session_data)
+        elif auth_code is not None:
+            session_data = await request.state.supertokens.get_session_data()
             if refresh_token is not None:
                 session_data['refresh_token'] = refresh_token
-            await create_new_session(request, payload['sub'], {}, session_data)
-    elif auth_code is not None:
-        session_data = await request.state.supertokens.get_session_data()
-        if refresh_token is not None:
-            session_data['refresh_token'] = refresh_token
-        elif 'refresh_token' in session_data:
-            del session_data['refresh_token']
-        await request.state.supertokens.update_session_data(session_data)
-    return JSONResponse(content={
-        'id_token': id_token,
-        'expires_in': expires_in
-    })
+            elif 'refresh_token' in session_data:
+                del session_data['refresh_token']
+            await request.state.supertokens.update_session_data(session_data)
+        return JSONResponse(content={
+            'id_token': id_token,
+            'expires_in': expires_in
+        })
+    except Exception as err:
+        raise_general_exception(err)
 
 
 async def manage_cookies_post_response(session: Session, response: Response):
