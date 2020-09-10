@@ -299,6 +299,9 @@ def test_cookie_and_header_values_with_driver_config_and_csrf_enabled(driver_con
 
     response_2 = driver_config_client.post(
         url='/custom/refresh',
+        headers={
+            'anti-csrf': response_1.headers.get('anti-csrf')
+        },
         cookies={
             'sRefreshToken': cookies_1['sRefreshToken']['value']
         }
@@ -407,7 +410,7 @@ def test_cookie_and_header_values_with_driver_config_and_csrf_disabled(driver_co
     set_key_value_in_config(TEST_ENABLE_ANTI_CSRF_CONFIG_KEY, False)
     set_key_value_in_config(
         TEST_COOKIE_SAME_SITE_CONFIG_KEY,
-        'None')
+        'lax')
     set_key_value_in_config(
         TEST_ACCESS_TOKEN_MAX_AGE_CONFIG_KEY,
         TEST_ACCESS_TOKEN_MAX_AGE_VALUE)
@@ -624,6 +627,9 @@ def test_cookie_and_header_values_with_csrf_enabled(core_config_client: TestClie
 
     response_2 = core_config_client.post(
         url='/refresh',
+        headers={
+            'anti-csrf': response_1.headers.get('anti-csrf')
+        },
         cookies={
             'sRefreshToken': cookies_1['sRefreshToken']['value']
         }
@@ -893,6 +899,9 @@ def test_supertokens_token_theft_detection(client: TestClient):
     cookies_1 = extract_all_cookies(response_1)
     response_2 = client.post(
         url='/refresh',
+        headers={
+            'anti-csrf': response_1.headers.get('anti-csrf')
+        },
         cookies={
             'sRefreshToken': cookies_1['sRefreshToken']['value']
         }
@@ -910,6 +919,9 @@ def test_supertokens_token_theft_detection(client: TestClient):
     )
     response_4 = client.post(
         url='/refresh',
+        headers={
+            'anti-csrf': response_1.headers.get('anti-csrf')
+        },
         cookies={
             'sRefreshToken': cookies_1['sRefreshToken']['value']
         }
@@ -937,6 +949,9 @@ def test_supertokens_basic_usage_of_sessions(client: TestClient):
 
     response_3 = client.post(
         url='/refresh',
+        headers={
+            'anti-csrf': response_1.headers.get('anti-csrf')
+        },
         cookies={
             'sRefreshToken': cookies_1['sRefreshToken']['value']
         }

@@ -61,10 +61,10 @@ def teardown_function(f):
 async def test_token_theft_detection():
     start_st()
     session = await create_new_session('userId', {}, {})
-    refreshed_session = await refresh_session(session['refreshToken']['token'])
+    refreshed_session = await refresh_session(session['refreshToken']['token'], session['antiCsrfToken'])
     await get_session(refreshed_session['accessToken']['token'], refreshed_session['antiCsrfToken'], True)
     try:
-        await refresh_session(session['refreshToken']['token'])
+        await refresh_session(session['refreshToken']['token'], session['antiCsrfToken'])
         assert False
     except SuperTokensTokenTheftError as e:
         assert e.user_id == 'userId'
@@ -81,7 +81,7 @@ async def test_basic_usage_of_sessions():
     await get_session(session['accessToken']['token'], session['antiCsrfToken'], True)
     assert not ProcessState.get_service_called()
 
-    refreshed_session_1 = await refresh_session(session['refreshToken']['token'])
+    refreshed_session_1 = await refresh_session(session['refreshToken']['token'], session['antiCsrfToken'])
     validate(refreshed_session_1, session_with_anti_csrf)
 
     updated_session = await get_session(refreshed_session_1['accessToken']['token'],

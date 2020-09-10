@@ -43,7 +43,7 @@ API_VERSION_TEST_MULTIPLE_SUPPORTED_RESULT = '2.1'
 API_VERSION_TEST_SINGLE_SUPPORTED_SV = ['0.0', '1.0', '1.1', '2.0']
 API_VERSION_TEST_SINGLE_SUPPORTED_CV = ['0.1', '0.2', '1.1', '2.1', '3.0']
 API_VERSION_TEST_SINGLE_SUPPORTED_RESULT = '1.1'
-API_VERSION_TEST_BASIC_RESULT = ['2.0', '2.1', '2.2']
+API_VERSION_TEST_BASIC_RESULT = ['2.0', '2.1', '2.2', '2.3']
 SUPPORTED_CORE_DRIVER_INTERFACE_FILE = './coreDriverInterfaceSupported.json'
 TEST_ENABLE_ANTI_CSRF_CONFIG_KEY = 'enable_anti_csrf'
 TEST_ACCESS_TOKEN_PATH_VALUE = '/test'
@@ -117,9 +117,13 @@ def start_st(host='localhost', port='3567'):
 
 
 def setup_st():
-    copy(ORIGINAL_LICENSE_FILE_PATH, LICENSE_FILE_PATH)
+    try:
+        copy(ORIGINAL_LICENSE_FILE_PATH, LICENSE_FILE_PATH)
+    except FileNotFoundError:
+        pass
     copy(ORIGINAL_CONFIG_YAML_FILE_PATH, CONFIG_YAML_FILE_PATH)
     set_key_value_in_config("refresh_api_path", "/refresh")
+    set_key_value_in_config("enable_anti_csrf", "true")
 
 
 def clean_st():

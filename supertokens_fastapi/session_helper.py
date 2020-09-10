@@ -121,10 +121,14 @@ async def get_session(access_token: str, anti_csrf_token: Union[str, None], do_a
         raise_try_refresh_token_exception(response['message'])
 
 
-async def refresh_session(refresh_token: str):
-    response = await Querier.get_instance().send_post_request(SESSION_REFRESH, {
+async def refresh_session(refresh_token: str, anti_csrf_token: Union[str, None]):
+    data = {
         'refreshToken': refresh_token
-    })
+    }
+    if anti_csrf_token is not None:
+        data['antiCsrfToken'] = anti_csrf_token
+
+    response = await Querier.get_instance().send_post_request(SESSION_REFRESH, data)
     if response['status'] == 'OK':
         response.pop('status', None)
         return response
