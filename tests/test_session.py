@@ -18,6 +18,7 @@ from .utils import (
     reset, setup_st, clean_st, start_st, set_key_value_in_config,
     TEST_ENABLE_ANTI_CSRF_CONFIG_KEY
 )
+from supertokens_fastapi.utils import find_max_version
 from supertokens_fastapi.session_helper import (
     get_all_session_handles_for_user,
     revoke_all_sessions_for_user,
@@ -35,7 +36,8 @@ from supertokens_fastapi.session_helper import (
 from supertokens_fastapi.exceptions import (
     SuperTokensTokenTheftError,
     SuperTokensUnauthorisedError,
-    SuperTokensTryRefreshTokenError
+    SuperTokensTryRefreshTokenError,
+    SuperTokensGeneralError
 )
 from jsonschema import validate
 from .schema import (
@@ -44,6 +46,8 @@ from .schema import (
     session_verify_without_access_token
 )
 from pytest import mark
+from supertokens_fastapi.querier import Querier
+from os import environ
 
 
 def setup_function(f):
@@ -196,3 +200,32 @@ async def test_anti_csrf_disabled_for_core():
 
     session_get_2 = await get_session(session['accessToken']['token'], None, True)
     validate(session_get_2, session_verify_without_access_token)
+
+
+@mark.asyncio
+async def test_token_theft_detection_with_api_key():
+    set_key_value_in_config("api_keys", "asckjsbdalvkjbasdlvjbalskdjvbaldkj")
+    start_st()
+    Querier.init_instance(None, "asckjsbdalvkjbasdlvjbalskdjvbaldkj")
+    session = await create_new_session('userId', {}, {})
+    refreshed_session = await refresh_session(session['refreshToken']['token'], session['antiCsrfToken'])
+    await get_session(refreshed_session['accessToken']['token'], refreshed_session['antiCsrfToken'], True)
+    try:
+        await refresh_session(session['refreshToken']['token'], session['antiCsrfToken'])
+        assert False
+    except SuperTokensTokenTheftError as e:
+        assert e.user_id == 'userId'
+        assert e.session_handle == session['session']['handle']
+        assert True
+
+
+@mark.asyncio
+async def test_query_without_api_key():
+    set_key_value_in_config("api_keys", "asckjsbdalvkjbasdlvjbalskdjvbaldkj")
+    start_st()
+    try:
+        version = await Querier.get_instance().get_api_version()
+        if (version != "2.0" and "com-" in environ['SUPERTOKENS_PATH']) or (find_max_version(version, "2.3") == version and "supertokens-" in environ['SUPERTOKENS_PATH']):
+            assert False
+    except SuperTokensGeneralError as e:
+        assert "Invalid API key" in str(e)
