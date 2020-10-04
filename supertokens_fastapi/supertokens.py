@@ -199,7 +199,6 @@ async def auth0_handler(
         is_login = action == 'login'
         if not is_login:
             request.state.supertokens = await __supertokens_session(request, True)
-
         form_data = {}
         if auth_code is None and action == 'refresh':
             session_data = await request.state.supertokens.get_session_data()
@@ -219,7 +218,6 @@ async def auth0_handler(
                 'code': auth_code,
                 'redirect_uri': request_json['redirect_uri']
             }
-
         response = await AsyncClient().post(
             url='https://' + domain + '/oauth/token',
             data=form_data,

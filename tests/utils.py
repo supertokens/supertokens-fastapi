@@ -74,9 +74,7 @@ ACCESS_CONTROL_EXPOSE_HEADER_ANTI_CSRF_DISABLE = 'id-refresh-token'
 AUTH0_DOMAIN = "dev-3myi6b3e.us.auth0.com"
 AUTH0_CLIENT_ID = "wQwadNYL58PoXDTIEiLeBmCe89BnMfiv"
 AUTH0_CLIENT_SECRET = "46n7WEAScmrHXukA_w6v1C8uYlVXPvAqEwu5eAyJRD5Wu951BHhiuE_0cQpW5GiV"
-TEST_ID_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' \
-                '.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ' \
-                '.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+TEST_ID_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 
 
 def set_key_value_in_config(key, value):
