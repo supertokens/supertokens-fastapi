@@ -1,4 +1,6 @@
-version: 2
+version: 2.1
+orbs:
+  slack: circleci/slack@3.4.2
 jobs:
   publish:
     docker:
@@ -9,6 +11,7 @@ jobs:
       - run: pip install setuptools wheel twine
       - run: python setup.py sdist bdist_wheel
       - run: twine upload -u $USERNAME -p $PASSWORD dist/*
+      - slack/status
   test:
     docker:
       - image: rishabhpoddar/supertokens_python_driver_testing
@@ -24,17 +27,22 @@ jobs:
       - run: pip3 install --upgrade pip
       - run: make dev-install
       - run: (cd .circleci/ && ./doTests.sh)
+      - slack/status
 workflows:
   version: 2
   tagged-build:
     jobs:
       - publish:
+          context:
+            - slack-notification
           filters:
             tags:
               only: /v[0-9]+(\.[0-9]+)*/
             branches:
               ignore: /.*/
       - test:
+          context:
+            - slack-notification
           filters:
             tags:
               only: /dev-v[0-9]+(\.[0-9]+)*/
