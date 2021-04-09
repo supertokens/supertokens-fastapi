@@ -39,7 +39,7 @@ from supertokens_fastapi.device_info import (
 )
 from json import JSONDecodeError
 from os import environ
-from threading import Lock
+from asyncio import Lock
 from httpx import AsyncClient, NetworkError, ConnectTimeout
 from typing import List, Union
 
@@ -76,7 +76,7 @@ class Querier:
         if self.__api_version is not None:
             return self.__api_version
 
-        with Querier.__lock:
+        async with Querier.__lock:
             if self.__api_version is not None:
                 return self.__api_version
 
@@ -96,7 +96,7 @@ class Querier:
                 SUPPORTED_CDI_VERSIONS)
 
             if api_version is None:
-                raise_general_exception('The running SuperTokens core version is not compatible with this Flask SDK. '
+                raise_general_exception('The running SuperTokens core version is not compatible with this FastAPI SDK. '
                                         'Please visit https://supertokens.io/docs/community/compatibility to find the '
                                         'right versions')
 
@@ -106,9 +106,7 @@ class Querier:
     @staticmethod
     def get_instance():
         if Querier.__instance is None:
-            with Querier.__lock:
-                if Querier.__instance is None:
-                    Querier.__instance = Querier()
+            Querier.__instance = Querier()
         return Querier.__instance
 
     @staticmethod

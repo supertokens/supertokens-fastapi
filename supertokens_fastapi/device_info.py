@@ -16,12 +16,10 @@ under the License.
 
 from supertokens_fastapi.exceptions import raise_general_exception
 from os import environ
-from threading import Lock
 
 
 class DeviceInfo:
     __instance = None
-    __lock = Lock()
 
     def __init__(self):
         self.__frontend_sdk = []
@@ -29,9 +27,7 @@ class DeviceInfo:
     @staticmethod
     def get_instance():
         if DeviceInfo.__instance is None:
-            with DeviceInfo.__lock:
-                if DeviceInfo.__instance is None:
-                    DeviceInfo.__instance = DeviceInfo()
+            DeviceInfo.__instance = DeviceInfo()
         return DeviceInfo.__instance
 
     @staticmethod
@@ -46,12 +42,11 @@ class DeviceInfo:
         return self.__frontend_sdk
 
     def add_to_frontend_sdk(self, sdk):
-        with DeviceInfo.__lock:
-            exists = False
-            for i in self.__frontend_sdk:
-                if i['name'] == sdk['name'] and i['version'] == sdk['version']:
-                    exists = True
-                    break
+        exists = False
+        for i in self.__frontend_sdk:
+            if i['name'] == sdk['name'] and i['version'] == sdk['version']:
+                exists = True
+                break
 
-            if not exists:
-                self.__frontend_sdk.append(sdk)
+        if not exists:
+            self.__frontend_sdk.append(sdk)

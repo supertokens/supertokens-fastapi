@@ -18,7 +18,7 @@ from supertokens_fastapi.querier import Querier
 from supertokens_fastapi.constants import HANDSHAKE
 from os import environ
 from supertokens_fastapi.exceptions import raise_general_exception
-from threading import Lock
+from asyncio import Lock
 
 
 class HandshakeInfo:
@@ -44,7 +44,7 @@ class HandshakeInfo:
     @staticmethod
     async def get_instance():
         if HandshakeInfo.__instance is None:
-            with HandshakeInfo.__lock:
+            async with HandshakeInfo.__lock:
                 if HandshakeInfo.__instance is None:
                     response = await Querier.get_instance().send_post_request(HANDSHAKE, {})
                     HandshakeInfo.__instance = HandshakeInfo(response)
@@ -59,9 +59,8 @@ class HandshakeInfo:
         HandshakeInfo.__instance = None
 
     def update_jwt_signing_public_key_info(self, new_key, new_expiry):
-        with HandshakeInfo.__lock:
-            self.jwt_signing_public_key = new_key
-            self.jwt_signing_public_key_expiry_time = new_expiry
+        self.jwt_signing_public_key = new_key
+        self.jwt_signing_public_key_expiry_time = new_expiry
 
     def get_session_expired_status_code(self):
         return self.session_expired_status_code
