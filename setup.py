@@ -48,7 +48,7 @@ setup(
     install_requires=[
         "PyJWT",
         "fastapi",
-        "starlette",
+        "starlette==0.13.*",
         "httpx",
         "pycryptodome",
     ],
