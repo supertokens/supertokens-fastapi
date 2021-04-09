@@ -17,7 +17,7 @@ extras_require = {
         'uvicorn',
         'requests',
         'pytest-asyncio',
-        'respx',
+        'respx>=0.16',
         'nest-asyncio'
     ])
 }
@@ -46,7 +46,7 @@ setup(
     ],
     keywords="",
     install_requires=[
-        "PyJWT",
+        "PyJWT>=2.0",
         "fastapi",
         "starlette==0.13.*",
         "httpx",

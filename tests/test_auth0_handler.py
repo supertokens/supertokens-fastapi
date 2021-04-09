@@ -39,16 +39,6 @@ from supertokens_fastapi.supertokens import (
 )
 from supertokens_fastapi.exceptions import SuperTokensGeneralError
 from supertokens_fastapi.utils import get_timestamp_ms
-from supertokens_fastapi.constants import (
-    API_VERSION,
-    SESSION,
-    SESSION_REMOVE,
-    SESSION_DATA,
-    HANDSHAKE
-)
-import httpx
-import json
-from requests import post, get
 
 nest_asyncio.apply()
 
@@ -124,49 +114,19 @@ def client():
 def request_mock():
     mock = respx.mock(assert_all_mocked=False, assert_all_called=False)
 
-    get_apis = [
-        'http://localhost:3567' + API_VERSION,
-        'http://localhost:3567' + SESSION_DATA
-    ]
-
-    post_apis = [
-        'http://localhost:3567' + SESSION,
-        'http://localhost:3567' + HANDSHAKE,
-        'http://localhost:3567' + SESSION_REMOVE
-    ]
-
-    def mock_get(request: httpx.Request, response):
-        url = str(request.url).split('?')[0]
-        if url not in get_apis or request.method != 'GET':
-            return None
-        res = get(url=request.url, headers=request.headers)
-        response.content = json.loads(res.content.decode('utf-8'))
-        response.status_code = res.status_code
-        return response
-
-    def mock_post(request: httpx.Request, response):
-        url = str(request.url).split('?')[0]
-        if url not in post_apis or request.method != 'POST':
-            return None
-        data = json.loads(request.read().decode())
-        res = post(url=request.url, json=data, headers=request.headers)
-        response.content = json.loads(res.content.decode('utf-8'))
-        response.status_code = res.status_code
-        return response
-
-    mock.add(mock_get)
-    mock.add(mock_post)
+    mock.route(host="localhost").pass_through()
     return mock
 
 
 @mark.asyncio
 async def test_login_without_callback(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
-            url='https://' + AUTH0_DOMAIN + '/oauth/token',
+        mock_request.post(
+            url='https://' + AUTH0_DOMAIN + '/oauth/token'
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': TEST_ID_TOKEN,
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
@@ -183,12 +143,13 @@ async def test_login_without_callback(client: TestClient):
 
 @mark.asyncio
 async def test_login_with_callback(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
-            url='https://' + AUTH0_DOMAIN + '/oauth/token',
+        mock_request.post(
+            url='https://' + AUTH0_DOMAIN + '/oauth/token'
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': TEST_ID_TOKEN,
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
@@ -216,12 +177,13 @@ async def test_login_with_callback(client: TestClient):
 
 @mark.asyncio
 async def test_login_with_callback_error_thrown(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
-            url='https://' + AUTH0_DOMAIN + '/oauth/token',
+        mock_request.post(
+            url='https://' + AUTH0_DOMAIN + '/oauth/token'
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': TEST_ID_TOKEN,
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
@@ -241,12 +203,13 @@ async def test_login_with_callback_error_thrown(client: TestClient):
 
 @mark.asyncio
 async def test_login_non_200_response(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
-            url='https://' + AUTH0_DOMAIN + '/oauth/token',
+        mock_request.post(
+            url='https://' + AUTH0_DOMAIN + '/oauth/token'
+        ).respond(
             status_code=403,
-            content={}
+            json={}
         )
         r1 = client.post("/login-without-callback", json={
             'action': 'login',
@@ -258,12 +221,13 @@ async def test_login_non_200_response(client: TestClient):
 
 @mark.asyncio
 async def test_login_invalid_id_token(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
-            url='https://' + AUTH0_DOMAIN + '/oauth/token',
+        mock_request.post(
+            url='https://' + AUTH0_DOMAIN + '/oauth/token'
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': 'invalid token',
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
@@ -280,12 +244,13 @@ async def test_login_invalid_id_token(client: TestClient):
 
 @mark.asyncio
 async def test_logout_with_depends(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
-            url='https://' + AUTH0_DOMAIN + '/oauth/token',
+        mock_request.post(
+            url='https://' + AUTH0_DOMAIN + '/oauth/token'
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': TEST_ID_TOKEN,
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
@@ -339,12 +304,13 @@ async def test_logout_with_depends(client: TestClient):
 
 @mark.asyncio
 async def test_logout_without_depends(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
-            url='https://' + AUTH0_DOMAIN + '/oauth/token',
+        mock_request.post(
+            url='https://' + AUTH0_DOMAIN + '/oauth/token'
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': TEST_ID_TOKEN,
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
@@ -398,18 +364,19 @@ async def test_logout_without_depends(client: TestClient):
 
 @mark.asyncio
 async def test_refresh_with_session_data(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
+        mock_request.post(
             url='https://' + AUTH0_DOMAIN + '/oauth/token',
+            name="t1"
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': TEST_ID_TOKEN,
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
                 'refresh_token': 'test-refresh-token'
-            },
-            alias='t1'
+            }
         )
         r1 = client.post("/login-without-callback", json={
             'action': 'login',
@@ -417,17 +384,18 @@ async def test_refresh_with_session_data(client: TestClient):
             'code': 'randomString'
         })
         c1 = extract_all_cookies(r1)
-        mock.pop('t1')
-        mock.post(
+        mock_request.pop('t1')
+        mock_request.post(
             url='https://' + AUTH0_DOMAIN + '/oauth/token',
+            name="t2"
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': 'custom-token',
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
                 'refresh_token': 'test-refresh-token'
-            },
-            alias='t2'
+            }
         )
 
         r2 = client.post(
@@ -449,12 +417,13 @@ async def test_refresh_with_session_data(client: TestClient):
 
 @mark.asyncio
 async def test_refresh_without_session_data(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
-            url='https://' + AUTH0_DOMAIN + '/oauth/token',
+        mock_request.post(
+            url='https://' + AUTH0_DOMAIN + '/oauth/token'
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': TEST_ID_TOKEN,
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
@@ -486,18 +455,19 @@ async def test_refresh_without_session_data(client: TestClient):
 
 @mark.asyncio
 async def test_refresh_non_200_response(client: TestClient):
-    async with request_mock() as mock:
+    async with request_mock() as mock_request:
         start_st()
-        mock.post(
+        mock_request.post(
             url='https://' + AUTH0_DOMAIN + '/oauth/token',
+            name="t1"
+        ).respond(
             status_code=200,
-            content={
+            json={
                 'id_token': TEST_ID_TOKEN,
                 'expires_in': get_timestamp_ms() + 30000,
                 'access_token': 'test-access-token',
                 'refresh_token': 'test-refresh-token'
-            },
-            alias='t1'
+            }
         )
         r1 = client.post("/login-without-callback", json={
             'action': 'login',
@@ -505,12 +475,13 @@ async def test_refresh_non_200_response(client: TestClient):
             'code': 'randomString'
         })
         c1 = extract_all_cookies(r1)
-        mock.pop('t1')
-        mock.post(
+        mock_request.pop('t1')
+        mock_request.post(
             url='https://' + AUTH0_DOMAIN + '/oauth/token',
+            name="t2"
+        ).respond(
             status_code=403,
-            content={},
-            alias='t2'
+            json={}
         )
         r2 = client.post(
             url="/refresh-auth0",

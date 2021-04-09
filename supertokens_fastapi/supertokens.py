@@ -199,7 +199,6 @@ async def auth0_handler(
         is_login = action == 'login'
         if not is_login:
             request.state.supertokens = await __supertokens_session(request, True)
-        form_data = {}
         if auth_code is None and action == 'refresh':
             session_data = await request.state.supertokens.get_session_data()
             if 'refresh_token' not in session_data:
@@ -236,7 +235,7 @@ async def auth0_handler(
             refresh_token = response_json['refresh_token']
 
         if is_login:
-            payload = decode(jwt=id_token, verify=False)
+            payload = decode(jwt=id_token, options={'verify_signature': False})
             if callback is not None:
                 try:
                     await callback(payload['sub'], id_token, access_token, refresh_token)

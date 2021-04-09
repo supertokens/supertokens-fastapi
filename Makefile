@@ -20,4 +20,4 @@ test:
 	pytest
 
 dev-install:
-	pip3 install nest-asyncio starlette==0.13.* httpx==0.15.5 pycryptodome pytest jsonschema requests autopep8 flake8 PyYAML pydantic fastapi pytest-asyncio PyJWT uvicorn respx
+	pip3 install nest-asyncio starlette==0.13.* httpx==0.15.5 pycryptodome pytest jsonschema requests autopep8 flake8 PyYAML pydantic fastapi pytest-asyncio PyJWT>=2.0 uvicorn respx>=0.16
