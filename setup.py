@@ -9,16 +9,16 @@ with open(path.join(here, "README.md"), mode="r", encoding="utf-8") as f:
 
 extras_require = {
     'dev': ([
-        'pytest',
-        'jsonschema',
-        'flake8',
-        'autopep8',
-        'PyYAML',
-        'uvicorn',
-        'requests',
-        'pytest-asyncio',
-        'respx>=0.16',
-        'nest-asyncio'
+        'pytest==6.2.3',
+        'jsonschema==3.2.0',
+        'flake8==3.9.0',
+        'autopep8==1.5.6',
+        'PyYAML==5.4.1',
+        'uvicorn==0.13.4',
+        'requests==2.25.1',
+        'pytest-asyncio==0.14.0',
+        'respx==0.16.3',
+        'nest-asyncio==1.5.1'
     ])
 }
 
@@ -46,11 +46,11 @@ setup(
     ],
     keywords="",
     install_requires=[
-        "PyJWT>=2.0",
-        "fastapi",
+        "PyJWT==2.0.*",
+        "fastapi>=0.60",
         "starlette==0.13.*",
-        "httpx",
-        "pycryptodome",
+        "httpx==0.15.*",
+        "pycryptodome==3.10.*",
     ],
     python_requires='>=3.7',
     extras_require=extras_require
