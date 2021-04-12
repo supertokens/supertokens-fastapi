@@ -225,7 +225,7 @@ async def test_query_without_api_key():
     start_st()
     try:
         version = await Querier.get_instance().get_api_version()
-        if (version != "2.0" and "com-" in environ['SUPERTOKENS_PATH']) or (find_max_version(version, "2.3") == version and "supertokens-" in environ['SUPERTOKENS_PATH']):
+        if (version != "2.0" and "com-" in environ['SUPERTOKENS_PATH']) or (find_max_version([version], ["2.3"]) == version and version != "2.3" and "supertokens-" in environ['SUPERTOKENS_PATH']):
             assert False
     except SuperTokensGeneralError as e:
         assert "Invalid API key" in str(e)
