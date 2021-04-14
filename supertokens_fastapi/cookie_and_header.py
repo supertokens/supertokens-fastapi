@@ -116,6 +116,7 @@ def get_cookie(request: Request, key: str):
 
 
 async def set_cookie(response: Response, key, value, expires, path, domain, secure, http_only, same_site):
+    response.delete_cookie(key)  # Delete earlier cookies
     if CookieConfig.get_instance().cookie_domain is not None:
         domain = CookieConfig.get_instance().cookie_domain
     if CookieConfig.get_instance().cookie_secure is not None:
