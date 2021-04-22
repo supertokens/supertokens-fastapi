@@ -1,5 +1,5 @@
 """
-Copyright (c) 2020, VRAI Labs and/or its affiliates. All rights reserved.
+Copyright (c) 2021, VRAI Labs and/or its affiliates. All rights reserved.
 
 This software is licensed under the Apache License, Version 2.0 (the
 "License") as published by the Apache Software Foundation.
@@ -14,363 +14,221 @@ License for the specific language governing permissions and limitations
 under the License.
 """
 
-
-from supertokens_fastapi.exceptions import (
-    raise_try_refresh_token_exception,
-    raise_unauthorised_exception,
-    SuperTokensTokenTheftError,
-    SuperTokensUnauthorisedError,
-    SuperTokensTryRefreshTokenError,
-    raise_general_exception
+from __future__ import annotations
+from .constants import (
+    TELEMETRY,
+    RID_KEY_HEADER,
+    FDI_KEY_HEADER,
+    TELEMETRY_SUPERTOKENS_API_URL,
+    TELEMETRY_SUPERTOKENS_API_VERSION
 )
-from supertokens_fastapi.handshake_info import HandshakeInfo
-from supertokens_fastapi.session import Session
-from supertokens_fastapi import session_helper
-from supertokens_fastapi.cookie_and_header import (
-    CookieConfig,
-    clear_cookies,
-    get_anti_csrf_header,
-    attach_anti_csrf_header,
-    set_options_api_headers,
-    get_access_token_from_cookie,
-    attach_access_token_to_cookie,
-    get_refresh_token_from_cookie,
-    attach_refresh_token_to_cookie,
-    save_frontend_info_from_request,
-    get_id_refresh_token_from_cookie,
-    attach_id_refresh_token_to_cookie_and_header,
-    get_cors_allowed_headers as get_cors_allowed_headers_from_cookie_and_headers
+from .session.cookie_and_header import clear_cookies, attach_access_token_to_cookie, \
+    attach_refresh_token_to_cookie, attach_id_refresh_token_to_cookie_and_header, attach_anti_csrf_header
+from .utils import (
+    validate_the_structure_of_user_input,
+    normalise_http_method,
+    get_rid_from_request,
+    send_non_200_response
 )
-from supertokens_fastapi.default_callbacks import (
-    default_unauthorised_callback,
-    default_try_refresh_token_callback,
-    default_token_theft_detected_callback
-)
-from fastapi.requests import Request
-from fastapi.responses import Response, JSONResponse
-from fastapi import FastAPI, HTTPException
-from starlette.middleware.base import BaseHTTPMiddleware
-from typing import Callable, List, Union, Awaitable
+from .types import INPUT_SCHEMA
+from .normalised_url_domain import NormalisedURLDomain
+from .normalised_url_path import NormalisedURLPath
+from .querier import Querier
+from .recipe_module import RecipeModule
+from typing import Union, List
+from os import environ
 from httpx import AsyncClient
-from jwt import decode
+from .exceptions import raise_general_exception
+from fastapi import FastAPI
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.requests import Request
+from fastapi.responses import Response
+from .session.session_class import Session
+from .exceptions import (
+    SuperTokensError,
+    GeneralError,
+    BadInputError
+)
+from .session.session_recipe import SessionRecipe
 
 
-async def create_new_session(request: Request, user_id: str, jwt_payload: Union[dict, None] = None,
-                             session_data: Union[dict, None] = None) -> Session:
-    session = await session_helper.create_new_session(user_id, jwt_payload, session_data)
-    access_token = session['accessToken']
-    refresh_token = session['refreshToken']
-    id_refresh_token = session['idRefreshToken']
-    request.state.supertokens = Session(access_token['token'], session['session']['handle'],
-                                        session['session']['userId'], session['session']['userDataInJWT'])
-    request.state.supertokens.new_access_token_info = access_token
-    request.state.supertokens.new_refresh_token_info = refresh_token
-    request.state.supertokens.new_id_refresh_token_info = id_refresh_token
-    if 'antiCsrfToken' in session and session['antiCsrfToken'] is not None:
-        request.state.supertokens.new_anti_csrf_token = session['antiCsrfToken']
-    return request.state.supertokens
+class AppInfo:
+    def __init__(self, recipe: Union[RecipeModule, None], app_info, api_web_proxy_path: NormalisedURLPath):
+        self.app_name: str = app_info['app_name']
+        self.api_domain: NormalisedURLDomain = NormalisedURLDomain(recipe, app_info['api_domain'])
+        self.website_domain: NormalisedURLDomain = NormalisedURLDomain(recipe, app_info['website_domain'])
+        self.api_base_path: NormalisedURLPath = api_web_proxy_path.append(recipe, NormalisedURLPath(recipe, '/auth') if 'api_base_path' not in app_info else NormalisedURLPath(recipe, app_info['api_base_path']))
+        self.website_base_path: NormalisedURLPath = NormalisedURLPath(recipe, '/auth') if 'website_base_path' not in app_info else NormalisedURLPath(recipe, app_info['website_base_path'])
 
 
-async def get_session(request: Request, enable_csrf_protection: bool) -> Session:
-    save_frontend_info_from_request(request)
-    id_refresh_token = get_id_refresh_token_from_cookie(request)
-    if id_refresh_token is None:
-        raise_unauthorised_exception('id refresh token is missing in cookies')
-    access_token = get_access_token_from_cookie(request)
-    if access_token is None:
-        raise_try_refresh_token_exception('access token missing in cookies')
-    anti_csrf_token = get_anti_csrf_header(request)
-    new_session = await session_helper.get_session(access_token, anti_csrf_token, enable_csrf_protection)
-    if 'accessToken' in new_session:
-        access_token = new_session['accessToken']['token']
-
-    request.state.supertokens = Session(access_token, new_session['session']['handle'],
-                                        new_session['session']['userId'], new_session['session']['userDataInJWT'])
-
-    if 'accessToken' in new_session:
-        request.state.supertokens.new_access_token_info = new_session['accessToken']
-    return request.state.supertokens
-
-
-async def refresh_session(request: Request) -> Session:
-    save_frontend_info_from_request(request)
-    refresh_token = get_refresh_token_from_cookie(request)
-    if refresh_token is None:
-        raise_unauthorised_exception('Missing auth tokens in cookies. Have you set the correct refresh API path in '
-                                     'your frontend and SuperTokens config?')
-    anti_csrf_token = get_anti_csrf_header(request)
-    new_session = await session_helper.refresh_session(refresh_token, anti_csrf_token)
-    access_token = new_session['accessToken']
-    refresh_token = new_session['refreshToken']
-    id_refresh_token = new_session['idRefreshToken']
-    request.state.supertokens = Session(access_token['token'], new_session['session']['handle'],
-                                        new_session['session']['userId'], new_session['session']['userDataInJWT'])
-    request.state.supertokens.new_access_token_info = access_token
-    request.state.supertokens.new_refresh_token_info = refresh_token
-    request.state.supertokens.new_id_refresh_token_info = id_refresh_token
-    if 'antiCsrfToken' in new_session and new_session['antiCsrfToken'] is not None:
-        request.state.supertokens.new_anti_csrf_token = new_session['antiCsrfToken']
-    return request.state.supertokens
-
-
-async def revoke_session(session_handle: str) -> bool:
-    return await session_helper.revoke_session(session_handle)
-
-
-async def revoke_all_sessions_for_user(user_id: str) -> List[str]:
-    return await session_helper.revoke_all_sessions_for_user(user_id)
-
-
-async def get_all_session_handles_for_user(user_id: str) -> List[str]:
-    return await session_helper.get_all_session_handles_for_user(user_id)
-
-
-async def revoke_multiple_sessions(session_handles: List[str]) -> List[str]:
-    return await session_helper.revoke_multiple_sessions(session_handles)
-
-
-async def get_session_data(session_handle: str) -> dict:
-    return await session_helper.get_session_data(session_handle)
-
-
-async def update_session_data(session_handle: str, new_session_data: dict) -> None:
-    await session_helper.update_session_data(session_handle, new_session_data)
-
-
-async def get_jwt_payload(session_handle: str) -> dict:
-    return await session_helper.get_jwt_payload(session_handle)
-
-
-async def update_jwt_payload(session_handle: str, new_jwt_payload: dict) -> None:
-    await session_helper.update_jwt_payload(session_handle, new_jwt_payload)
-
-
-def set_relevant_headers_for_options_api(response: Response) -> None:
-    set_options_api_headers(response)
-
-
-def get_cors_allowed_headers():
-    return get_cors_allowed_headers_from_cookie_and_headers()
-
-
-async def __supertokens_session(request: Request, enable_anti_csrf_check: bool) -> Session:
-    refresh_path = (await HandshakeInfo.get_instance()).refresh_token_path
-    if CookieConfig.get_instance().refresh_token_path is not None:
-        refresh_path = CookieConfig.get_instance().refresh_token_path
-    if request.url.path in (refresh_path, refresh_path + '/',
-                            '/' + refresh_path + '/' + refresh_path + '/') and request.method == "POST":
-        request.state.supertokens = await refresh_session(request)
-    else:
-        request.state.supertokens = await get_session(request, enable_anti_csrf_check)
-    return request.state.supertokens
-
-
-async def supertokens_session(request: Request):
-    enable_anti_csrf_check = request.method != "GET"
-    return await __supertokens_session(request, enable_anti_csrf_check)
-
-
-async def supertokens_session_with_anti_csrf(request: Request):
-    return await __supertokens_session(request, True)
-
-
-async def supertokens_session_without_anti_csrf(request: Request):
-    return await __supertokens_session(request, False)
-
-
-async def auth0_handler(
-    request: Request,
-    domain: str,
-    client_id: str,
-    client_secret: str,
-    callback: Union[Callable[[str, str, str, Union[str, None]], Awaitable[any]], None] = None
-) -> Response:
-    try:
-        request_json = await request.json()
-        action = request_json['action']
-        if action == 'logout':
-            if not hasattr(request.state, 'supertokens'):
-                request.state.supertokens = await __supertokens_session(request, True)
-            await request.state.supertokens.revoke_session()
-            return JSONResponse({})
-        auth_code = None
-        if 'code' in request_json:
-            auth_code = request_json['code']
-        is_login = action == 'login'
-        if not is_login:
-            request.state.supertokens = await __supertokens_session(request, True)
-        if auth_code is None and action == 'refresh':
-            session_data = await request.state.supertokens.get_session_data()
-            if 'refresh_token' not in session_data:
-                return JSONResponse(content={}, status_code=403)
-            form_data = {
-                'grant_type': 'refresh_token',
-                'client_id': client_id,
-                'client_secret': client_secret,
-                'refresh_token': session_data['refresh_token']
-            }
-        else:
-            form_data = {
-                'grant_type': 'authorization_code',
-                'client_id': client_id,
-                'client_secret': client_secret,
-                'code': auth_code,
-                'redirect_uri': request_json['redirect_uri']
-            }
-        response = await AsyncClient().post(
-            url='https://' + domain + '/oauth/token',
-            data=form_data,
-            headers={
-                'content-type': 'application/x-www-form-urlencoded'
-            }
-        )
-        if response.status_code != 200:
-            return JSONResponse(content={}, status_code=response.status_code)
-        response_json = response.json()
-        id_token = response_json['id_token']
-        expires_in = response_json['expires_in']
-        access_token = response_json['access_token']
-        refresh_token = None
-        if 'refresh_token' in response_json:
-            refresh_token = response_json['refresh_token']
-
-        if is_login:
-            payload = decode(jwt=id_token, options={'verify_signature': False})
-            if callback is not None:
-                try:
-                    await callback(payload['sub'], id_token, access_token, refresh_token)
-                except TypeError:
-                    callback(payload['sub'], id_token, access_token, refresh_token)
-            else:
-                session_data = {}
-                if refresh_token is not None:
-                    session_data['refresh_token'] = refresh_token
-                await create_new_session(request, payload['sub'], {}, session_data)
-        elif auth_code is not None:
-            session_data = await request.state.supertokens.get_session_data()
-            if refresh_token is not None:
-                session_data['refresh_token'] = refresh_token
-            elif 'refresh_token' in session_data:
-                del session_data['refresh_token']
-            await request.state.supertokens.update_session_data(session_data)
-        return JSONResponse(content={
-            'id_token': id_token,
-            'expires_in': expires_in
-        })
-    except HTTPException as e:
-        # if the exception is of type HTTPException, we don't modify the exception and raise it as it is
-        raise e
-    except Exception as err:
-        raise_general_exception(err)
-
-
-async def manage_cookies_post_response(session: Session, response: Response):
+def manage_cookies_post_response(session: Session, response: Response):
+    recipe = SessionRecipe.get_instance()
     if session.remove_cookies:
-        await clear_cookies(response)
+        clear_cookies(recipe, response)
     else:
         access_token = session.new_access_token_info
         if access_token is not None:
-            await attach_access_token_to_cookie(
+            attach_access_token_to_cookie(
+                recipe,
                 response,
                 access_token['token'],
-                access_token['expiry'],
-                access_token['domain'] if 'domain' in access_token else None,
-                access_token['cookiePath'],
-                access_token['cookieSecure'],
-                access_token['sameSite']
+                access_token['expiry']
             )
         refresh_token = session.new_refresh_token_info
         if refresh_token is not None:
-            await attach_refresh_token_to_cookie(
+            attach_refresh_token_to_cookie(
+                recipe,
                 response,
                 refresh_token['token'],
-                refresh_token['expiry'],
-                refresh_token['domain'] if 'domain' in refresh_token else None,
-                refresh_token['cookiePath'],
-                refresh_token['cookieSecure'],
-                refresh_token['sameSite']
+                refresh_token['expiry']
             )
         id_refresh_token = session.new_id_refresh_token_info
         if id_refresh_token is not None:
-            await attach_id_refresh_token_to_cookie_and_header(
+            attach_id_refresh_token_to_cookie_and_header(
+                recipe,
                 response,
                 id_refresh_token['token'],
-                id_refresh_token['expiry'],
-                id_refresh_token['domain'] if 'domain' in id_refresh_token else None,
-                id_refresh_token['cookiePath'],
-                id_refresh_token['cookieSecure'],
-                id_refresh_token['sameSite']
+                id_refresh_token['expiry']
             )
         anti_csrf_token = session.new_anti_csrf_token
         if anti_csrf_token is not None:
-            attach_anti_csrf_header(response, anti_csrf_token)
+            attach_anti_csrf_header(recipe, response, anti_csrf_token)
 
 
-class SupertokensResponseMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: FastAPI):
-        super().__init__(app)
+class Supertokens:
+    __instance = None
 
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        if hasattr(request.state, "supertokens") and isinstance(request.state.supertokens, Session):
-            await manage_cookies_post_response(request.state.supertokens, response)
-        return response
+    def __init__(self, config, app: FastAPI):
+        validate_the_structure_of_user_input(config, INPUT_SCHEMA, 'init_function', None)
+        self.api_web_proxy_path = NormalisedURLPath(None, config['api_web_proxy_path']) if 'api_web_proxy_path' in config else NormalisedURLPath(None, '')
+        self.app_info: AppInfo = AppInfo(None, config['app_info'], self.api_web_proxy_path)
 
+        hosts = list(map(lambda h: NormalisedURLDomain(None, h.strip()), filter(lambda x: x != '', config['supertokens']['connectionURI'].split(';'))))
+        api_key = None
+        if 'api_key' in config['supertokens']:
+            api_key = config['supertokens']['api_key']
+        Querier.init(hosts, api_key)
 
-class SuperTokens:
-    def __init__(
-        self,
-        app: FastAPI,
-        hosts=None,
-        api_key=None,
-        access_token_path=None,
-        refresh_token_path=None,
-        cookie_domain=None,
-        cookie_secure=None,
-        cookie_same_site=None
-    ):
-        self.__unauthorised_callback = default_unauthorised_callback
-        self.__try_refresh_token_callback = default_try_refresh_token_callback
-        self.__token_theft_detected_callback = default_token_theft_detected_callback
+        if 'recipe_list' not in config or len(config['recipe_list'] == 0):
+            raise_general_exception(None, 'Please provide at least one recipe to the supertokens.init function call')
 
-        session_helper.init(hosts, api_key)
-        CookieConfig.init(access_token_path, refresh_token_path, cookie_domain, cookie_secure, cookie_same_site)
-        app.add_middleware(SupertokensResponseMiddleware)
-        self.__set_error_handler_callbacks(app)
+        # TODO server-less
 
-    def __set_error_handler_callbacks(self, app):
-        @app.exception_handler(SuperTokensUnauthorisedError)
-        async def handle_unauthorised(_, e):
-            try:
-                response = await self.__unauthorised_callback(e)
-            except TypeError:
-                response = self.__unauthorised_callback(e)
-            await clear_cookies(response)
+        self.is_in_serverless_env = False if 'is_in_serverless_env' not in config else config['is_in_serverless_env']
+        self.recipe_modules: List[RecipeModule] = list(map(lambda func: func(self.app_info, self.is_in_serverless_env), config['recipe_list']))
+
+        for recipe in self.recipe_modules:
+            apis_handled = recipe.get_apis_handled()
+            stringified_apis_handled: List[str] = list(filter(lambda x: x != "", map(lambda api: '' if api.disabled else api.method + ';' + api.path_without_api_base_path.get_as_string_dangerous(), apis_handled)))
+            if len(stringified_apis_handled) != len(set(stringified_apis_handled)):
+                raise_general_exception(recipe, 'Duplicate APIs exposed from recipe. Please combine them into one API')
+
+        telemetry = ('SUPERTOKENS_ENV' not in environ) or (environ['SUPERTOKENS_ENV'] != 'testing')
+        if 'telemetry' in config:
+            telemetry = config['telemetry']
+
+        if telemetry:
+            self.send_telemetry()
+
+        app.add_middleware(self.__Middleware)
+        self.__set_error_handler(app)
+
+    async def send_telemetry(self):
+        try:
+            querier = Querier.get_instance(self.is_in_serverless_env, None)
+            response = await querier.send_get_request(NormalisedURLPath(None, TELEMETRY), {})
+            telemetry_id = None
+            if 'exists' in response and response['exists'] and 'telemetry_id' in response:
+                telemetry_id = response['telemetry_id']
+            data = {
+                'appName': self.app_info.app_name,
+                'websiteDomain': self.app_info.website_domain.get_as_string_dangerous()
+            }
+            if telemetry_id is not None:
+                data = {
+                    **data,
+                    'telemetryId': telemetry_id
+                }
+            await AsyncClient.post(url=TELEMETRY_SUPERTOKENS_API_URL, json=data, headers={'api-version': TELEMETRY_SUPERTOKENS_API_VERSION})
+        except Exception:
+            pass
+
+    @staticmethod
+    def init(config, app: FastAPI = None):
+        if Supertokens.__instance is None:
+            Supertokens.__instance = Supertokens(config, app)
+
+    @staticmethod
+    def reset():
+        if ('SUPERTOKENS_ENV' not in environ) or (
+                environ['SUPERTOKENS_ENV'] != 'testing'):
+            raise_general_exception(None, 'calling testing function in non testing env')
+        Querier.reset()
+        Supertokens.__instance = None
+
+    @staticmethod
+    def get_instance() -> Supertokens:
+        if Supertokens.__instance is not None:
+            return Supertokens.__instance
+        raise_general_exception(None, 'Initialisation not done. Did you forget to call the SuperTokens.init function?')
+
+    def __set_error_handler(self, app: FastAPI):
+        @app.exception_handler(SuperTokensError)
+        async def handle_supertokens_error(request: Request, err: SuperTokensError):
+            if isinstance(err, GeneralError):
+                raise Exception(err)
+
+            if isinstance(err, BadInputError):
+                return send_non_200_response(err.recipe, str(err), 400)
+
+            for recipe in self.recipe_modules:
+                if recipe.is_error_from_this_or_child_recipe_based_on_instance(err):
+                    return recipe.handle_error(request, err)
+
+            raise err
+
+    def get_all_cors_headers(self) -> List[str]:
+        headers_set = set()
+        headers_set.add(RID_KEY_HEADER)
+        headers_set.add(FDI_KEY_HEADER)
+        for recipe in self.recipe_modules:
+            headers = recipe.get_all_cors_headers()
+            for header in headers:
+                headers_set.add(header)
+
+        return list(headers_set)
+
+    class __Middleware(BaseHTTPMiddleware):
+        def __init__(self, app: FastAPI):
+            super().__init__(app)
+
+        async def dispatch(self, request: Request, call_next):
+            path = Supertokens.get_instance().api_web_proxy_path.append(None, NormalisedURLPath(None, request.url.path))
+            method = normalise_http_method(request.method)
+
+            if not path.startswith(Supertokens.get_instance().app_info.api_base_path):
+                response = await call_next(request)
+            else:
+                request_rid = get_rid_from_request(request)
+                request_id = None
+                matched_recipe = None
+                if request_rid is not None:
+                    for recipe in Supertokens.get_instance().recipe_modules:
+                        if recipe.get_recipe_id() == request_rid:
+                            matched_recipe = recipe
+                            break
+                    if matched_recipe is not None:
+                        request_id = matched_recipe.return_api_id_if_can_handle_request(path, method)
+                else:
+                    for recipe in Supertokens.get_instance().recipe_modules:
+                        request_id = recipe.return_api_id_if_can_handle_request(path, method)
+                        if request_id is not None:
+                            matched_recipe = recipe
+                            break
+                if request_id is not None and matched_recipe is not None:
+                    response = await matched_recipe.handle_api_request(request_id, request, path, method)
+                else:
+                    response = await call_next(request)
+            if hasattr(request.state, "supertokens") and isinstance(request.state.supertokens, Session):
+                manage_cookies_post_response(request.state.supertokens, response)
             return response
-
-        @app.exception_handler(SuperTokensTryRefreshTokenError)
-        async def handle_try_refresh_token(_, e):
-            try:
-                response = await self.__try_refresh_token_callback(e)
-            except TypeError:
-                response = self.__try_refresh_token_callback(e)
-            return response
-
-        @app.exception_handler(SuperTokensTokenTheftError)
-        async def handle_token_theft(_, e):
-            try:
-                response = await self.__token_theft_detected_callback(e.session_handle, e.user_id)
-            except TypeError:
-                response = self.__token_theft_detected_callback(e.session_handle, e.user_id)
-            await clear_cookies(response)
-            return response
-
-    def set_unauthorised_error_handler(self, callback: Callable[[SuperTokensUnauthorisedError], Union[Awaitable[Response], Response]]):
-        self.__unauthorised_callback = callback
-
-    def set_try_refresh_token_error_handler(self, callback: Callable[[SuperTokensTryRefreshTokenError],
-                                                                     Union[Awaitable[Response], Response]]):
-        self.__try_refresh_token_callback = callback
-
-    def set_token_theft_detected_error_handler(self, callback: Callable[[str, str], Awaitable[Response]]):
-        self.__token_theft_detected_callback = callback

@@ -10,7 +10,6 @@ with open(path.join(here, "README.md"), mode="r", encoding="utf-8") as f:
 extras_require = {
     'dev': ([
         'pytest==6.2.3',
-        'jsonschema==3.2.0',
         'flake8==3.9.0',
         'autopep8==1.5.6',
         'PyYAML==5.4.1',
@@ -24,7 +23,7 @@ extras_require = {
 
 setup(
     name="supertokens_fastapi",
-    version="1.1.1",
+    version="2.0.0",
     author="SuperTokens",
     license="Apache 2.0",
     author_email="team@supertokens.io",
@@ -51,6 +50,8 @@ setup(
         "starlette==0.13.*",
         "httpx==0.15.*",
         "pycryptodome==3.10.*",
+        'jsonschema==3.2.0',
+        "tldextract==3.1.0"
     ],
     python_requires='>=3.7',
     extras_require=extras_require

@@ -1,5 +1,5 @@
 """
-Copyright (c) 2021, VRAI Labs and/or its affiliates. All rights reserved.
+Copyright (c) 2020, VRAI Labs and/or its affiliates. All rights reserved.
 
 This software is licensed under the Apache License, Version 2.0 (the
 "License") as published by the Apache Software Foundation.
@@ -13,15 +13,5 @@ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 """
-
-from . import exceptions
-from .supertokens import Supertokens
-from fastapi import FastAPI
-
-
-def init(config, app: FastAPI):
-    return Supertokens.init(config, app)
-
-
-def get_all_cors_headers():
-    return Supertokens.get_instance().get_all_cors_headers()
+from .refresh import handle_refresh_api
+from .signout import handle_signout_api

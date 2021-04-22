@@ -1,5 +1,5 @@
 """
-Copyright (c) 2020, VRAI Labs and/or its affiliates. All rights reserved.
+Copyright (c) 2021, VRAI Labs and/or its affiliates. All rights reserved.
 
 This software is licensed under the Apache License, Version 2.0 (the
 "License") as published by the Apache Software Foundation.
@@ -14,17 +14,57 @@ License for the specific language governing permissions and limitations
 under the License.
 """
 
-from base64 import b64encode, b64decode
+from __future__ import annotations
+from jsonschema.exceptions import ValidationError
+from jsonschema import validate
+from re import fullmatch
+from fastapi.requests import Request
+from typing import Union, List
+from .recipe_module import RecipeModule
+from fastapi.responses import JSONResponse
+from .constants import RID_KEY_HEADER
+from .exceptions import raise_general_exception
+from .constants import ERROR_MESSAGE_KEY
 from time import time
-from typing import List, Union
+from base64 import b64encode, b64decode
 
 
-def utf_base64encode(s: str) -> str:
-    return b64encode(s.encode('utf-8')).decode('utf-8')
+def validate_the_structure_of_user_input(config, input_schema, config_root, recipe):
+    try:
+        validate(config, input_schema)
+    except ValidationError as e:
+        path = '.'.join(e.path)
+        if not path == '':
+            path = 'for path "' + path + '": '
+
+        error_message = path + e.message
+
+        if 'is a required property' in error_message:
+            error_message = 'input config ' + error_message
+        if 'Additional properties are not allowed' in error_message:
+            error_message += ' Did you mean to set this on the frontend side?'
+        error_message = 'Config schema error in ' + config_root + ': ' + error_message
+
+        raise_general_exception(recipe, error_message)
 
 
-def utf_base64decode(s: str) -> str:
-    return b64decode(s.encode('utf-8')).decode('utf-8')
+def is_an_ip_address(ip_address: str) -> bool:
+    return fullmatch(
+        r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|['
+        r'01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$',
+        ip_address) is not None
+
+
+def normalise_http_method(method: str) -> str:
+    return method.lower()
+
+
+def get_rid_from_request(request: Request) -> Union[str, None]:
+    return get_header(request, RID_KEY_HEADER)
+
+
+def get_header(request: Request, key: str) -> Union[str, None]:
+    return request.headers.get(key, None)
 
 
 def find_max_version(versions_1: List[str], versions_2: List[str]) -> Union[str, None]:
@@ -65,23 +105,24 @@ def is_5xx_error(status_code: int) -> bool:
     return status_code // 100 == 5
 
 
-def sanitize_string(s: any) -> Union[str, None]:
-    if s == "":
-        return s
-
-    if not isinstance(s, str):
-        return None
-
-    return s.strip()
-
-
-def sanitize_number(n: any) -> Union[Union[int, float], None]:
-    _type = type(n)
-    if _type == int or _type == float:
-        return n
-
-    return None
+def send_non_200_response(recipe: Union[RecipeModule, None], message: str, status_code: int) -> JSONResponse:
+    if status_code < 300:
+        raise_general_exception(recipe, 'Calling sendNon200Response with status code < 300')
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            ERROR_MESSAGE_KEY: message
+        }
+    )
 
 
 def get_timestamp_ms() -> int:
     return int(time() * 1000)
+
+
+def utf_base64encode(s: str) -> str:
+    return b64encode(s.encode('utf-8')).decode('utf-8')
+
+
+def utf_base64decode(s: str) -> str:
+    return b64decode(s.encode('utf-8')).decode('utf-8')
