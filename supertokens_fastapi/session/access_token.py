@@ -1,5 +1,5 @@
 """
-Copyright (c) 2020, VRAI Labs and/or its affiliates. All rights reserved.
+Copyright (c) 2021, VRAI Labs and/or its affiliates. All rights reserved.
 
 This software is licensed under the Apache License, Version 2.0 (the
 "License") as published by the Apache Software Foundation.
@@ -13,13 +13,34 @@ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 """
+from __future__ import annotations
+from .jwt import get_payload
+from supertokens_fastapi.utils import get_timestamp_ms
+from .exceptions import raise_try_refresh_token_exception
+from typing import Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .session_recipe import SessionRecipe
 
-from supertokens_fastapi.jwt import get_payload
-from supertokens_fastapi.utils import sanitize_number, sanitize_string, get_timestamp_ms
-from supertokens_fastapi.exceptions import raise_try_refresh_token_exception
+
+def sanitize_string(s: any) -> Union[str, None]:
+    if s == "":
+        return s
+
+    if not isinstance(s, str):
+        return None
+
+    return s.strip()
 
 
-def get_info_from_access_token(token, jwt_signing_public_key, do_anti_csrf_check):
+def sanitize_number(n: any) -> Union[Union[int, float], None]:
+    _type = type(n)
+    if _type == int or _type == float:
+        return n
+
+    return None
+
+
+def get_info_from_access_token(recipe: SessionRecipe, token: str, jwt_signing_public_key: str, do_anti_csrf_check: bool):
     try:
         payload = get_payload(token, jwt_signing_public_key)
         session_handle = sanitize_string(payload.get('sessionHandle'))
@@ -57,4 +78,4 @@ def get_info_from_access_token(token, jwt_signing_public_key, do_anti_csrf_check
             'timeCreated': time_created
         }
     except Exception as e:
-        raise_try_refresh_token_exception(e)
+        raise_try_refresh_token_exception(recipe, e)

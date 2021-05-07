@@ -13,14 +13,25 @@ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 """
-SUPPORTED_CDI_VERSIONS = ['2.7']
-VERSION = '2.0.0'
-TELEMETRY = '/telemetry'
-TELEMETRY_SUPERTOKENS_API_URL = 'https://api.supertokens.io/0/st/telemetry'
-TELEMETRY_SUPERTOKENS_API_VERSION = 2
-ERROR_MESSAGE_KEY = 'message'
-API_KEY_HEADER = 'api-key'
-RID_KEY_HEADER = 'rid'
-FDI_KEY_HEADER = 'fdi-version'
-API_VERSION = '/apiversion'
-API_VERSION_HEADER = 'cdi-version'
+from __future__ import annotations
+from supertokens_fastapi.exceptions import SuperTokensError
+
+
+def raise_email_already_verified_exception(recipe, msg):
+    if isinstance(msg, SuperTokensError):
+        raise msg
+    raise EmailAlreadyVerifiedError(recipe, msg) from None
+
+
+def raise_email_verification_invalid_token_exception(recipe, msg):
+    if isinstance(msg, SuperTokensError):
+        raise msg
+    raise EmailVerificationInvalidTokenError(recipe, msg) from None
+
+
+class EmailAlreadyVerifiedError(SuperTokensError):
+    pass
+
+
+class EmailVerificationInvalidTokenError(SuperTokensError):
+    pass

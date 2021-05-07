@@ -13,14 +13,21 @@ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 """
-SUPPORTED_CDI_VERSIONS = ['2.7']
-VERSION = '2.0.0'
-TELEMETRY = '/telemetry'
-TELEMETRY_SUPERTOKENS_API_URL = 'https://api.supertokens.io/0/st/telemetry'
-TELEMETRY_SUPERTOKENS_API_VERSION = 2
-ERROR_MESSAGE_KEY = 'message'
-API_KEY_HEADER = 'api-key'
-RID_KEY_HEADER = 'rid'
-FDI_KEY_HEADER = 'fdi-version'
-API_VERSION = '/apiversion'
-API_VERSION_HEADER = 'cdi-version'
+from .recipe import EmailVerificationRecipe
+from . import exceptions
+
+
+def init(config):
+    return EmailVerificationRecipe.init(config)
+
+
+async def create_email_verification_token(user_id: str, email: str):
+    return await EmailVerificationRecipe.get_instance().create_email_verification_token(user_id, email)
+
+
+async def verify_email_using_token(token: str):
+    return await EmailVerificationRecipe.get_instance().verify_email_using_token(token)
+
+
+async def is_email_verified(user_id: str, email: str):
+    return await EmailVerificationRecipe.get_instance().is_email_verified(user_id, email)

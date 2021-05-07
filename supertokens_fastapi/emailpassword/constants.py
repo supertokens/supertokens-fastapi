@@ -13,14 +13,19 @@ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 """
-SUPPORTED_CDI_VERSIONS = ['2.7']
-VERSION = '2.0.0'
-TELEMETRY = '/telemetry'
-TELEMETRY_SUPERTOKENS_API_URL = 'https://api.supertokens.io/0/st/telemetry'
-TELEMETRY_SUPERTOKENS_API_VERSION = 2
-ERROR_MESSAGE_KEY = 'message'
-API_KEY_HEADER = 'api-key'
-RID_KEY_HEADER = 'rid'
-FDI_KEY_HEADER = 'fdi-version'
-API_VERSION = '/apiversion'
-API_VERSION_HEADER = 'cdi-version'
+FORM_FIELD_PASSWORD_ID = 'password'
+FORM_FIELD_EMAIL_ID = 'email'
+SIGNUP = '/signup'
+SIGNIN = '/signin'
+USER_PASSWORD_RESET_TOKEN = '/user/password/reset/token'
+USER_PASSWORD_RESET = '/user/password/reset'
+SIGNOUT = '/signout'
+SIGNUP_EMAIL_EXISTS = '/signup/email/exists'
+RESET_PASSWORD = '/reset-password'
+RECIPE_SIGNUP = '/recipe/signup'
+RECIPE_SIGNIN = '/recipe/signin'
+RECIPE_USER = '/recipe/user'
+RECIPE_USER_PASSWORD_RESET_TOKEN = '/recipe/user/password/reset/token'
+RECIPE_USER_PASSWORD_RESET = '/recipe/user/password/reset'
+RECIPE_USERS = '/recipe/users'
+RECIPE_USERS_COUNT = '/recipe/users/count'
