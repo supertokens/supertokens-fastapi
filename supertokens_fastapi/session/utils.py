@@ -15,8 +15,6 @@ under the License.
 """
 from __future__ import annotations
 from .cookie_and_header import clear_cookies
-from .session_recipe import SessionRecipe
-from supertokens_fastapi.supertokens import AppInfo
 from supertokens_fastapi.utils import validate_the_structure_of_user_input, is_an_ip_address, send_non_200_response
 from .types import INPUT_SCHEMA
 from urllib.parse import urlparse
@@ -24,7 +22,11 @@ from supertokens_fastapi.exceptions import raise_general_exception
 from tldextract import extract
 from supertokens_fastapi.normalised_url_path import NormalisedURLPath
 from .constants import SESSION_REFRESH
-from fastapi.requests import Request
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .session_recipe import SessionRecipe
+    from supertokens_fastapi.supertokens import AppInfo
+    from fastapi.requests import Request
 
 
 def normalise_session_scope(recipe: SessionRecipe, session_scope: str) -> str:
@@ -122,14 +124,17 @@ class ErrorHandlers:
 
 
 async def default_unauthorised_callback(_: Request, __: str):
+    from .session_recipe import SessionRecipe
     return send_non_200_response(SessionRecipe.get_instance(), 'unauthorised', SessionRecipe.get_instance().config.session_expired_status_code)
 
 
 async def default_try_refresh_token_callback(_: Request, __: str):
+    from .session_recipe import SessionRecipe
     return send_non_200_response(SessionRecipe.get_instance(), 'try refresh token', SessionRecipe.get_instance().config.session_expired_status_code)
 
 
 async def default_token_theft_detected_callback(_: Request, session_handle: str, __: str):
+    from .session_recipe import SessionRecipe
     await SessionRecipe.get_instance().revoke_session(session_handle)
     return send_non_200_response(SessionRecipe.get_instance(), 'token theft detected', SessionRecipe.get_instance().config.session_expired_status_code)
 
@@ -143,7 +148,7 @@ class SessionConfig:
                  session_expired_status_code: int,
                  session_refresh_feature: SessionRefreshFeature,
                  error_handlers: ErrorHandlers,
-                 enable_anti_csrf: bool,
+                 anti_csrf: str,
                  sign_out_feature: SignOutFeature
                  ):
         self.refresh_token_path = refresh_token_path
@@ -153,7 +158,7 @@ class SessionConfig:
         self.session_expired_status_code = session_expired_status_code
         self.session_refresh_feature = session_refresh_feature
         self.error_handlers = error_handlers
-        self.enable_anti_csrf = enable_anti_csrf
+        self.anti_csrf = anti_csrf
         self.sign_out_feature = sign_out_feature
 
 
@@ -186,7 +191,9 @@ def validate_and_normalise_user_input(recipe: SessionRecipe, app_info: AppInfo, 
         sign_out_feature_disable_default_implementation = config['sign_out_feature'][
             'disable_default_implementation']
     sign_out_feature = SignOutFeature(sign_out_feature_disable_default_implementation)
-    enable_anti_csrf = config['enable_anti_csrf'] if 'enable_anti_csrf' in config else cookie_same_site == 'none'
+    anti_csrf = 'VIA_CUSTOM_HEADER' if cookie_same_site == 'none' else 'NONE'
+    if 'anti_csrf' in config:
+        anti_csrf = config['anti_csrf']
 
     on_token_theft_detected = default_token_theft_detected_callback
     on_try_refresh_token = default_try_refresh_token_callback
@@ -196,13 +203,11 @@ def validate_and_normalise_user_input(recipe: SessionRecipe, app_info: AppInfo, 
     if 'error_handlers' in config and 'on_unauthorised' in config['error_handlers']:
         on_unauthorised = config['error_handlers']['on_unauthorised']
     error_handlers = ErrorHandlers(
+        recipe,
         on_token_theft_detected,
         on_try_refresh_token,
         on_unauthorised
     )
-    if cookie_same_site == 'none' and not enable_anti_csrf:
-        raise_general_exception(recipe, 'Security error: enableAntiCsrf can\'t be set to false if cookieSameSite '
-                                        'value is "none".')
 
     if (cookie_same_site == 'none') and \
             not cookie_secure and \
@@ -219,6 +224,6 @@ def validate_and_normalise_user_input(recipe: SessionRecipe, app_info: AppInfo, 
         session_expired_status_code,
         session_refresh_feature,
         error_handlers,
-        enable_anti_csrf,
+        anti_csrf,
         sign_out_feature
     )

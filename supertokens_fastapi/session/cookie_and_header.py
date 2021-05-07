@@ -14,8 +14,10 @@ License for the specific language governing permissions and limitations
 under the License.
 """
 from __future__ import annotations
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 from .constants import (
+    RID_HEADER_GET_KEY,
+    RID_HEADER_SET_KEY,
     ACCESS_TOKEN_COOKIE_KEY,
     REFRESH_TOKEN_COOKIE_KEY,
     ANTI_CSRF_HEADER_SET_KEY,
@@ -26,9 +28,10 @@ from .constants import (
     ID_REFRESH_TOKEN_HEADER_SET_KEY
 )
 from urllib.parse import quote, unquote
-from fastapi.requests import Request
-from fastapi.responses import Response
-from supertokens_fastapi.session.session_recipe import SessionRecipe
+if TYPE_CHECKING:
+    from fastapi.requests import Request
+    from fastapi.responses import Response
+    from .session_recipe import SessionRecipe
 from supertokens_fastapi.utils import get_timestamp_ms
 from supertokens_fastapi.utils import get_header
 from supertokens_fastapi.exceptions import raise_general_exception
@@ -54,7 +57,7 @@ def set_front_token_in_headers(recipe: SessionRecipe, response: Response, user_i
 
 
 def get_cors_allowed_headers():
-    return [ANTI_CSRF_HEADER_SET_KEY]
+    return [ANTI_CSRF_HEADER_SET_KEY, RID_HEADER_SET_KEY]
 
 
 def set_header(recipe: SessionRecipe, response: Response, key, value, allow_duplicate: bool):
@@ -99,6 +102,10 @@ def attach_anti_csrf_header(recipe: SessionRecipe, response: Response, value):
 
 def get_anti_csrf_header(request: Request):
     return get_header(request, ANTI_CSRF_HEADER_GET_KEY)
+
+
+def get_rid_header(request: Request):
+    return get_header(request, RID_HEADER_GET_KEY)
 
 
 def attach_access_token_to_cookie(

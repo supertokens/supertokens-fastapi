@@ -26,9 +26,7 @@ type_number = {
     'type': 'number'
 }
 
-type_any = {
-    'type': 'any'
-}
+type_any = {}
 
 INPUT_SCHEMA = {
     'type': 'object',
@@ -59,7 +57,10 @@ INPUT_SCHEMA = {
             },
             'additionalProperties': False
         },
-        'enable_anti_csrf': type_boolean
+        'anti_csrf': {
+            'type': 'string',
+            'enum': ['VIA_TOKEN', 'VIA_CUSTOM_HEADER', 'NONE']
+        }
     },
     'required': [],
     'additionalProperties': False

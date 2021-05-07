@@ -17,9 +17,10 @@ under the License.
 from __future__ import annotations
 from .querier import Querier
 import abc
-from .supertokens import AppInfo
-from typing import Union, Literal, List
-from .normalised_url_path import NormalisedURLPath
+from typing import Union, Literal, List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .supertokens import AppInfo
+    from .normalised_url_path import NormalisedURLPath
 from fastapi.requests import Request
 from .exceptions import SuperTokensError
 
@@ -48,7 +49,11 @@ class RecipeModule(abc.ABC):
         return self.querier
 
     def return_api_id_if_can_handle_request(self, path: NormalisedURLPath, method: str) -> Union[str, None]:
-        pass
+        apis_handled = self.get_apis_handled()
+        for current_api in apis_handled:
+            if not current_api.disabled and current_api.method == method and self.app_info.api_base_path.append(self, current_api.path_without_api_base_path).equals(path):
+                return current_api.request_id
+        return None
 
     @abc.abstractmethod
     def is_error_from_this_or_child_recipe_based_on_instance(self, err):

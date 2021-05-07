@@ -14,10 +14,11 @@ License for the specific language governing permissions and limitations
 under the License.
 """
 from __future__ import annotations
-from typing import Union
+from typing import Union, TYPE_CHECKING
 from urllib.parse import urlparse
 from .utils import is_an_ip_address
-from .recipe_module import RecipeModule
+if TYPE_CHECKING:
+    from .recipe_module import RecipeModule
 from .exceptions import raise_general_exception
 
 

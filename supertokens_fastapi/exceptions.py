@@ -14,8 +14,9 @@ License for the specific language governing permissions and limitations
 under the License.
 """
 from __future__ import annotations
-from .recipe_module import RecipeModule
-from typing import Union
+from typing import Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .recipe_module import RecipeModule
 
 
 def raise_general_exception(recipe: Union[RecipeModule, None], msg, previous=None):

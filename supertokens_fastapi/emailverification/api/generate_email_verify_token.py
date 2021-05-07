@@ -16,22 +16,31 @@ under the License.
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from supertokens_fastapi.session.session_recipe import SessionRecipe
+    from supertokens_fastapi.emailverification.recipe import EmailVerificationRecipe
     from fastapi.requests import Request
 from fastapi.responses import JSONResponse
-from supertokens_fastapi.session.exceptions import UnauthorisedError
 from supertokens_fastapi.exceptions import raise_general_exception
+from supertokens_fastapi.session import verify_session
+from supertokens_fastapi.emailverification.types import User
 
 
-async def handle_signout_api(recipe: SessionRecipe, request: Request):
-    try:
-        session = await recipe.get_session(request)
-    except UnauthorisedError:
-        return JSONResponse({})
-
+async def handle_generate_email_verify_token_api(recipe: EmailVerificationRecipe, request: Request):
+    session = await verify_session()(request)
     if session is None:
         raise_general_exception(recipe, 'Session is undefined. Should not come here.')
 
-    await session.revoke_session()
+    user_id = session.get_user_id()
+    email = await recipe.config.get_email_for_user_id(user_id)
 
-    return JSONResponse({})
+    token = await recipe.create_email_verification_token(user_id, email)
+    user = User(user_id, email)
+
+    email_verify_link = (await recipe.config.get_email_verification_url(user)) + '?token=' + token + '&rid' + recipe.get_recipe_id()
+
+    try:
+        await recipe.config.create_and_send_custom_email(user, email_verify_link)
+    except Exception:
+        pass
+    return JSONResponse({
+        'status': 'OK'
+    })

@@ -34,15 +34,16 @@ from .types import INPUT_SCHEMA
 from .normalised_url_domain import NormalisedURLDomain
 from .normalised_url_path import NormalisedURLPath
 from .querier import Querier
-from .recipe_module import RecipeModule
-from typing import Union, List
+from typing import Union, List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .recipe_module import RecipeModule
+    from fastapi.requests import Request
+    from fastapi.responses import Response
 from os import environ
 from httpx import AsyncClient
 from .exceptions import raise_general_exception
 from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
-from fastapi.requests import Request
-from fastapi.responses import Response
 from .session.session_class import Session
 from .exceptions import (
     SuperTokensError,
@@ -53,11 +54,12 @@ from .session.session_recipe import SessionRecipe
 
 
 class AppInfo:
-    def __init__(self, recipe: Union[RecipeModule, None], app_info, api_web_proxy_path: NormalisedURLPath):
+    def __init__(self, recipe: Union[RecipeModule, None], app_info):
         self.app_name: str = app_info['app_name']
+        self.api_gateway_path: NormalisedURLPath = NormalisedURLPath(None, app_info['api_gateway_path']) if 'api_gateway_path' in app_info else NormalisedURLPath(None, '')
         self.api_domain: NormalisedURLDomain = NormalisedURLDomain(recipe, app_info['api_domain'])
         self.website_domain: NormalisedURLDomain = NormalisedURLDomain(recipe, app_info['website_domain'])
-        self.api_base_path: NormalisedURLPath = api_web_proxy_path.append(recipe, NormalisedURLPath(recipe, '/auth') if 'api_base_path' not in app_info else NormalisedURLPath(recipe, app_info['api_base_path']))
+        self.api_base_path: NormalisedURLPath = self.api_gateway_path.append(recipe, NormalisedURLPath(recipe, '/auth') if 'api_base_path' not in app_info else NormalisedURLPath(recipe, app_info['api_base_path']))
         self.website_base_path: NormalisedURLPath = NormalisedURLPath(recipe, '/auth') if 'website_base_path' not in app_info else NormalisedURLPath(recipe, app_info['website_base_path'])
 
 
@@ -98,18 +100,17 @@ def manage_cookies_post_response(session: Session, response: Response):
 class Supertokens:
     __instance = None
 
-    def __init__(self, config, app: FastAPI):
+    def __init__(self, app: FastAPI, config):
         validate_the_structure_of_user_input(config, INPUT_SCHEMA, 'init_function', None)
-        self.api_web_proxy_path = NormalisedURLPath(None, config['api_web_proxy_path']) if 'api_web_proxy_path' in config else NormalisedURLPath(None, '')
-        self.app_info: AppInfo = AppInfo(None, config['app_info'], self.api_web_proxy_path)
+        self.app_info: AppInfo = AppInfo(None, config['app_info'])
 
-        hosts = list(map(lambda h: NormalisedURLDomain(None, h.strip()), filter(lambda x: x != '', config['supertokens']['connectionURI'].split(';'))))
+        hosts = list(map(lambda h: NormalisedURLDomain(None, h.strip()), filter(lambda x: x != '', config['supertokens']['connection_uri'].split(';'))))
         api_key = None
         if 'api_key' in config['supertokens']:
             api_key = config['supertokens']['api_key']
         Querier.init(hosts, api_key)
 
-        if 'recipe_list' not in config or len(config['recipe_list'] == 0):
+        if 'recipe_list' not in config or not isinstance(config['recipe_list'], list) or len(config['recipe_list']) == 0:
             raise_general_exception(None, 'Please provide at least one recipe to the supertokens.init function call')
 
         # TODO server-less
@@ -129,8 +130,6 @@ class Supertokens:
 
         if telemetry:
             self.send_telemetry()
-
-        app.add_middleware(self.__Middleware)
         self.__set_error_handler(app)
 
     async def send_telemetry(self):
@@ -154,9 +153,9 @@ class Supertokens:
             pass
 
     @staticmethod
-    def init(config, app: FastAPI = None):
+    def init(app: FastAPI, config):
         if Supertokens.__instance is None:
-            Supertokens.__instance = Supertokens(config, app)
+            Supertokens.__instance = Supertokens(app, config)
 
     @staticmethod
     def reset():
@@ -183,8 +182,7 @@ class Supertokens:
 
             for recipe in self.recipe_modules:
                 if recipe.is_error_from_this_or_child_recipe_based_on_instance(err):
-                    return recipe.handle_error(request, err)
-
+                    return await recipe.handle_error(request, err)
             raise err
 
     def get_all_cors_headers(self) -> List[str]:
@@ -198,12 +196,16 @@ class Supertokens:
 
         return list(headers_set)
 
+    @staticmethod
+    def middleware():
+        return Supertokens.__Middleware
+
     class __Middleware(BaseHTTPMiddleware):
         def __init__(self, app: FastAPI):
             super().__init__(app)
 
         async def dispatch(self, request: Request, call_next):
-            path = Supertokens.get_instance().api_web_proxy_path.append(None, NormalisedURLPath(None, request.url.path))
+            path = Supertokens.get_instance().app_info.api_gateway_path.append(None, NormalisedURLPath(None, request.url.path))
             method = normalise_http_method(request.method)
 
             if not path.startswith(Supertokens.get_instance().app_info.api_base_path):

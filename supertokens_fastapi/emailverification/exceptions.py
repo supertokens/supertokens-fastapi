@@ -15,37 +15,23 @@ under the License.
 """
 from __future__ import annotations
 from supertokens_fastapi.exceptions import SuperTokensError
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from supertokens_fastapi.recipe_module import RecipeModule
 
 
-def raise_token_theft_exception(recipe, user_id, session_handle):
-    raise TokenTheftError(recipe, user_id, session_handle)
-
-
-def raise_try_refresh_token_exception(recipe, msg):
+def raise_email_already_verified_exception(recipe, msg):
     if isinstance(msg, SuperTokensError):
         raise msg
-    raise TryRefreshTokenError(recipe, msg) from None
+    raise EmailAlreadyVerifiedError(recipe, msg) from None
 
 
-def raise_unauthorised_exception(recipe, msg):
+def raise_email_verification_invalid_token_exception(recipe, msg):
     if isinstance(msg, SuperTokensError):
         raise msg
-    raise UnauthorisedError(recipe, msg) from None
+    raise EmailVerificationInvalidTokenError(recipe, msg) from None
 
 
-class TokenTheftError(SuperTokensError):
-    def __init__(self, recipe: RecipeModule, user_id, session_handle):
-        super().__init__(recipe, 'token theft detected')
-        self.user_id = user_id
-        self.session_handle = session_handle
-
-
-class UnauthorisedError(SuperTokensError):
+class EmailAlreadyVerifiedError(SuperTokensError):
     pass
 
 
-class TryRefreshTokenError(SuperTokensError):
+class EmailVerificationInvalidTokenError(SuperTokensError):
     pass

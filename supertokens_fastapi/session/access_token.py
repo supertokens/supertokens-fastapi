@@ -17,8 +17,9 @@ from __future__ import annotations
 from .jwt import get_payload
 from supertokens_fastapi.utils import get_timestamp_ms
 from .exceptions import raise_try_refresh_token_exception
-from .session_recipe import SessionRecipe
-from typing import Union
+from typing import Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .session_recipe import SessionRecipe
 
 
 def sanitize_string(s: any) -> Union[str, None]:

@@ -14,11 +14,13 @@ License for the specific language governing permissions and limitations
 under the License.
 """
 from __future__ import annotations
-from supertokens_fastapi.normalised_url_path import NormalisedURLPath
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from supertokens_fastapi.normalised_url_path import NormalisedURLPath
+    from .session_recipe import SessionRecipe
 from . import session_functions
 from .constants import RECIPE_SESSION_REGENERATE
 from .exceptions import raise_unauthorised_exception
-from .session_recipe import SessionRecipe
 
 
 class Session:

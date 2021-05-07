@@ -13,7 +13,7 @@ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 """
-
+from __future__ import annotations
 from .constants import (
     API_VERSION,
     API_KEY_HEADER,
@@ -25,8 +25,9 @@ from json import JSONDecodeError
 from os import environ
 from httpx import AsyncClient, NetworkError, ConnectTimeout
 from .normalised_url_path import NormalisedURLPath
-from typing import Union
-from .recipe_module import RecipeModule
+from typing import Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .recipe_module import RecipeModule
 from .exceptions import raise_general_exception
 from .utils import (
     is_4xx_error,

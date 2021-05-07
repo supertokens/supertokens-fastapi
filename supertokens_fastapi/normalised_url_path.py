@@ -16,8 +16,9 @@ under the License.
 
 from __future__ import annotations
 from urllib.parse import urlparse
-from .recipe_module import RecipeModule
-from typing import Union
+from typing import Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .recipe_module import RecipeModule
 from .exceptions import raise_general_exception
 
 

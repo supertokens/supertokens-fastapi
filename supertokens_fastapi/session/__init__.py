@@ -22,7 +22,7 @@ from . import exceptions
 
 
 def init(config=None):
-    SessionRecipe.init(config)
+    return SessionRecipe.init(config)
 
 
 async def create_new_session(request: Request, user_id: str, jwt_payload: Union[dict, None] = None,
@@ -70,5 +70,5 @@ async def update_jwt_payload(session_handle: str, new_jwt_payload: dict) -> None
     return await SessionRecipe.get_instance().update_jwt_payload(session_handle, new_jwt_payload)
 
 
-async def verify_session(anti_csrf_check: Union[bool, None] = None, session_required: bool = True):
+def verify_session(anti_csrf_check: Union[bool, None] = None, session_required: bool = True):
     return original_verify_session(SessionRecipe.get_instance(), anti_csrf_check, session_required)

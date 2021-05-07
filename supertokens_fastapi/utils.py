@@ -18,9 +18,10 @@ from __future__ import annotations
 from jsonschema.exceptions import ValidationError
 from jsonschema import validate
 from re import fullmatch
-from fastapi.requests import Request
-from typing import Union, List
-from .recipe_module import RecipeModule
+from typing import Union, List, Callable, TYPE_CHECKING
+if TYPE_CHECKING:
+    from fastapi.requests import Request
+    from .recipe_module import RecipeModule
 from fastapi.responses import JSONResponse
 from .constants import RID_KEY_HEADER
 from .exceptions import raise_general_exception
@@ -126,3 +127,14 @@ def utf_base64encode(s: str) -> str:
 
 def utf_base64decode(s: str) -> str:
     return b64decode(s.encode('utf-8')).decode('utf-8')
+
+
+def get_filtered_list(func: Callable, given_list: List) -> List:
+    return list(filter(func, given_list))
+
+
+def find_first_occurrence_in_list(condition: Callable, given_list: List) -> Union[any, None]:
+    for item in given_list:
+        if condition(item):
+            return item
+    return None

@@ -1,5 +1,5 @@
 """
-Copyright (c) 2020, VRAI Labs and/or its affiliates. All rights reserved.
+Copyright (c) 2021, VRAI Labs and/or its affiliates. All rights reserved.
 
 This software is licensed under the Apache License, Version 2.0 (the
 "License") as published by the Apache Software Foundation.
@@ -16,22 +16,26 @@ under the License.
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from supertokens_fastapi.session.session_recipe import SessionRecipe
+    from supertokens_fastapi.emailpassword.recipe import EmailPasswordRecipe
     from fastapi.requests import Request
 from fastapi.responses import JSONResponse
-from supertokens_fastapi.session.exceptions import UnauthorisedError
 from supertokens_fastapi.exceptions import raise_general_exception
+from supertokens_fastapi.session import get_session
+from supertokens_fastapi.session.exceptions import UnauthorisedError
 
 
-async def handle_signout_api(recipe: SessionRecipe, request: Request):
+async def handle_sign_out_api(recipe: EmailPasswordRecipe, request: Request):
     try:
-        session = await recipe.get_session(request)
+        session = await get_session(request)
     except UnauthorisedError:
-        return JSONResponse({})
+        return JSONResponse({
+            'status': 'OK'
+        })
 
     if session is None:
         raise_general_exception(recipe, 'Session is undefined. Should not come here.')
 
     await session.revoke_session()
-
-    return JSONResponse({})
+    return JSONResponse({
+        'status': 'OK'
+    })

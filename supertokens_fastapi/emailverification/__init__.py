@@ -13,21 +13,21 @@ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 """
-
+from .recipe import EmailVerificationRecipe
 from . import exceptions
-from .supertokens import Supertokens
-from fastapi import FastAPI
-from . import session
-from . import emailpassword
 
 
-def init(app: FastAPI, config):
-    return Supertokens.init(app, config)
+def init(config):
+    return EmailVerificationRecipe.init(config)
 
 
-def middleware():
-    return Supertokens.middleware()
+async def create_email_verification_token(user_id: str, email: str):
+    return await EmailVerificationRecipe.get_instance().create_email_verification_token(user_id, email)
 
 
-def get_all_cors_headers():
-    return Supertokens.get_instance().get_all_cors_headers()
+async def verify_email_using_token(token: str):
+    return await EmailVerificationRecipe.get_instance().verify_email_using_token(token)
+
+
+async def is_email_verified(user_id: str, email: str):
+    return await EmailVerificationRecipe.get_instance().is_email_verified(user_id, email)

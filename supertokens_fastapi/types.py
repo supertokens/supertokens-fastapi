@@ -42,7 +42,8 @@ INPUT_SCHEMA = {
                 'website_domain': type_string,
                 'api_domain': type_string,
                 'api_base_path': type_string,
-                'website_base_path': type_string
+                'website_base_path': type_string,
+                'api_gateway_path': type_string
             },
             'required': ['app_name', 'website_domain', 'api_domain'],
             'additionalProperties': False
@@ -51,8 +52,7 @@ INPUT_SCHEMA = {
             'type': 'array'
         },
         'telemetry': type_boolean,
-        'is_in_serverless_env': type_boolean,
-        'api_web_proxy_path': type_string
+        'is_in_serverless_env': type_boolean
     },
     'required': ['supertokens', 'app_info', 'recipe_list'],
     'additional_properties': False

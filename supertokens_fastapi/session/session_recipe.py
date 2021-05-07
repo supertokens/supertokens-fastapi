@@ -14,33 +14,37 @@ License for the specific language governing permissions and limitations
 under the License.
 """
 from __future__ import annotations
-from os import environ
-from supertokens_fastapi.normalised_url_path import NormalisedURLPath
-from supertokens_fastapi.recipe_module import RecipeModule, APIHandled
-from typing import List, Union
-from fastapi.requests import Request
-from supertokens_fastapi.exceptions import raise_general_exception, SuperTokensError
-from .constants import RECIPE_HANDSHAKE, SESSION_REFRESH, SIGNOUT
 from .cookie_and_header import (
-    get_id_refresh_token_from_cookie,
+    get_rid_header,
+    get_anti_csrf_header,
     get_cors_allowed_headers,
-    get_access_token_from_cookie, get_anti_csrf_header, get_refresh_token_from_cookie
+    get_access_token_from_cookie,
+    get_refresh_token_from_cookie,
+    get_id_refresh_token_from_cookie
 )
 from .exceptions import (
-    raise_unauthorised_exception,
-    raise_try_refresh_token_exception,
+    TokenTheftError,
     UnauthorisedError,
-    TokenTheftError
+    raise_unauthorised_exception,
+    raise_try_refresh_token_exception
 )
-from supertokens_fastapi.supertokens import AppInfo
-from .utils import validate_and_normalise_user_input
-from . import session_functions
-from .session_class import Session
 from .api import (
     handle_signout_api,
     handle_refresh_api
 )
+from os import environ
+from typing import List, Union, TYPE_CHECKING
+from . import session_functions
+from .session_class import Session
+if TYPE_CHECKING:
+    from fastapi.requests import Request
+    from supertokens_fastapi.supertokens import AppInfo
+from .utils import validate_and_normalise_user_input
+from .constants import RECIPE_HANDSHAKE, SESSION_REFRESH, SIGNOUT
+from supertokens_fastapi.normalised_url_path import NormalisedURLPath
+from supertokens_fastapi.recipe_module import RecipeModule, APIHandled
 from supertokens_fastapi.process_state import AllowedProcessStates, ProcessState
+from supertokens_fastapi.exceptions import raise_general_exception, SuperTokensError
 
 
 class HandshakeInfo:
@@ -50,7 +54,7 @@ class HandshakeInfo:
         self.access_token_blacklisting_enabled = info['accessTokenBlacklistingEnabled']
         self.jwt_signing_public_key = info['jwtSigningPublicKey']
         self.jwt_signing_public_key_expiry_time = info['jwtSigningPublicKeyExpiryTime']
-        self.enable_anti_csrf = info['enableAntiCsrf']
+        self.anti_csrf = info['antiCsrf']
         self.access_token_validity = info['accessTokenValidity']
         self.refresh_token_validity = info['refreshTokenValidity']
 
@@ -68,7 +72,7 @@ class SessionRecipe(RecipeModule):
         super().__init__(recipe_id, app_info, is_in_serverless_env)
         if config is None:
             config = {}
-        self.config = validate_and_normalise_user_input(config)
+        self.config = validate_and_normalise_user_input(self, app_info, config)
         self.handshake_info: Union[HandshakeInfo, None] = None
 
         try:
@@ -110,6 +114,7 @@ class SessionRecipe(RecipeModule):
         def func(app_info: AppInfo, is_in_serverless_env):
             if SessionRecipe.__instance is None:
                 SessionRecipe.__instance = SessionRecipe(SessionRecipe.recipe_id, app_info, is_in_serverless_env, config)
+                return SessionRecipe.__instance
             else:
                 raise_general_exception(None, 'Session recipe has already been initialised. Please check your code for bugs.')
         return func
@@ -135,7 +140,7 @@ class SessionRecipe(RecipeModule):
             response = await self.get_querier().send_post_request(RECIPE_HANDSHAKE, {})
             self.handshake_info = HandshakeInfo({
                 **response,
-                'enableAntiCsrf': self.config.enable_anti_csrf
+                'antiCsrf': self.config.anti_csrf
             })
         return self.handshake_info
 
@@ -171,7 +176,8 @@ class SessionRecipe(RecipeModule):
         anti_csrf_token = get_anti_csrf_header(request)
         if anti_csrf_check is None:
             anti_csrf_check = request.method.lower() != 'get'
-        new_session = await session_functions.get_session(self, access_token, anti_csrf_token, anti_csrf_check)
+        new_session = await session_functions.get_session(self, access_token, anti_csrf_token, anti_csrf_check,
+                                                          get_rid_header(request) is not None)
         if 'accessToken' in new_session:
             access_token = new_session['accessToken']['token']
 
@@ -188,7 +194,8 @@ class SessionRecipe(RecipeModule):
             raise_unauthorised_exception(self, 'Refresh token not found. Are you sending the refresh token in the '
                                                'request as a cookie?')
         anti_csrf_token = get_anti_csrf_header(request)
-        new_session = await session_functions.refresh_session(self, refresh_token, anti_csrf_token)
+        new_session = await session_functions.refresh_session(self, refresh_token, anti_csrf_token,
+                                                              get_rid_header(request) is not None)
         access_token = new_session['accessToken']
         refresh_token = new_session['refreshToken']
         id_refresh_token = new_session['idRefreshToken']

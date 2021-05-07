@@ -16,22 +16,20 @@ under the License.
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from supertokens_fastapi.session.session_recipe import SessionRecipe
+    from supertokens_fastapi.emailpassword.recipe import EmailPasswordRecipe
     from fastapi.requests import Request
 from fastapi.responses import JSONResponse
-from supertokens_fastapi.session.exceptions import UnauthorisedError
-from supertokens_fastapi.exceptions import raise_general_exception
+from supertokens_fastapi.exceptions import raise_bad_input_exception
 
 
-async def handle_signout_api(recipe: SessionRecipe, request: Request):
-    try:
-        session = await recipe.get_session(request)
-    except UnauthorisedError:
-        return JSONResponse({})
+async def handle_email_exists_api(recipe: EmailPasswordRecipe, request: Request):
+    email = request.query_params.get('email', None)
+    if email is None:
+        raise_bad_input_exception(recipe, 'Please provide the email as a GET param')
 
-    if session is None:
-        raise_general_exception(recipe, 'Session is undefined. Should not come here.')
+    user = await recipe.get_user_by_email(email)
 
-    await session.revoke_session()
-
-    return JSONResponse({})
+    return JSONResponse({
+        'status': 'OK',
+        'exists': user is not None
+    })
